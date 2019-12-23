@@ -28,10 +28,10 @@
         android:orientation="horizontal">
 
         <Button
-            android:id="@+id/raise_wpm_button"
+            android:id="@+id/lower_wpm_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text=" + " />
+            android:text=" - " />
 
         <TextView
             android:id="@+id/current_wpm_view"
@@ -39,11 +39,13 @@
             android:layout_height="wrap_content"
             android:padding="10dp" />
 
+
         <Button
-            android:id="@+id/lower_wpm_button"
+            android:id="@+id/raise_wpm_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text=" - " />
+            android:text=" + " />
+
 
     </LinearLayout>
 
