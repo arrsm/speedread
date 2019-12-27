@@ -62,11 +62,15 @@ public class MainActivity extends AppCompatActivity {
     protected StringBuilder fullText; // holds full story in memory
     private ArrayList<String> story; // fullText converted to arraylist
     private Handler storyWordsIterationHandler = new Handler();
+    private Handler boldIterator = new Handler();
     private TextView fullStoryView;
     private TextView currentWordView;
     private Button raiseWPMButton;
     private Button lowerWPMButton;
     private TextView WPM_view;
+    private int chunkSize;
+    private int chunkIdx;
+    private ArrayList<StringBuilder> displayStrs;
 
     //long held incrementers
     Timer fixedTimer = new Timer();
@@ -100,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
     public StringBuilder chunkTextIntoWords(ArrayList<String> tokens, int chunkSize) {
         // TODO must I use the global var here
         // TODO probably fails words the end
+        // deprecated for the bolding functionality
         StringBuilder displayStr = new StringBuilder();
         int chunkMax = currentWordIdx + chunkSize;
         while (currentWordIdx < chunkMax) {
@@ -107,6 +112,30 @@ public class MainActivity extends AppCompatActivity {
             currentWordIdx++;
         }
         return displayStr;
+    }
+
+    public ArrayList<StringBuilder> chunkTextIntoWordsAndFormat(ArrayList<String> tokens, int chunkSize) {
+        // TODO must I use the global var here
+        // TODO probably fails words the end
+        int chunkStart = currentWordIdx;
+        int chunkMax = chunkStart + chunkSize;
+        ArrayList<StringBuilder> displayStrs = new ArrayList<StringBuilder>();
+
+        int targetWord = chunkStart;
+        while (targetWord < chunkMax) {
+            StringBuilder formattedDisplayStr = new StringBuilder();
+            for (int i = chunkStart; i < chunkMax; i++) {
+                if (targetWord == i) {
+                    formattedDisplayStr.append("<b>" + tokens.get(i) + "</b> ");
+                } else {
+                    formattedDisplayStr.append(tokens.get(i) + " ");
+                }
+            }
+            displayStrs.add(formattedDisplayStr);
+            targetWord++;
+            currentWordIdx++;
+        }
+        return displayStrs;
     }
 
     void initTimer() {
@@ -185,9 +214,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setDefaultValues() {
-        WPM = 200;
+        WPM = 100;
         WPM_MS = WPMtoMS(WPM);
         currentWordIdx = 0;
+        chunkSize = 15;
+        chunkIdx = 0;
     }
 
     private long WPMtoMS(long WPM) {
@@ -198,13 +229,31 @@ public class MainActivity extends AppCompatActivity {
         currentWordView.setText(story.get(currentWordIdx));
         Runnable runnable = new Runnable() {
             public void run() {
-                // TODO magic seven
-                if (currentWordIdx < (maxWordIdx - 7)) {
-                    StringBuilder displayStr = chunkTextIntoWords(story, 6);
-                    currentWordView.setText(displayStr.toString());
-                    storyWordsIterationHandler.postDelayed(this, WPM_MS * 5);
+                if (currentWordIdx < (maxWordIdx - chunkSize - 1)) {
+                    iterateWordChunksFormatted();
+                    // TODO cycling the displayed chunk vs scrolling it if possible
+                    storyWordsIterationHandler.postDelayed(this, WPM_MS * chunkSize + 1);
                 } else {
                     storyWordsIterationHandler.removeCallbacks(this);
+                }
+            }
+        };
+        runnable.run();
+    }
+
+
+    public void iterateWordChunksFormatted() {
+        currentWordView.setText(story.get(currentWordIdx));
+        displayStrs = chunkTextIntoWordsAndFormat(story, chunkSize);
+        Runnable runnable = new Runnable() {
+            public void run() {
+                if (chunkIdx < chunkSize) {
+                    currentWordView.setText(Html.fromHtml(displayStrs.get(chunkIdx).toString())); //TODO iterate the bolded words
+                    chunkIdx++;
+                    boldIterator.postDelayed(this, WPM_MS);
+                } else {
+                    boldIterator.removeCallbacks(this);
+                    chunkIdx = 0;
                 }
             }
         };
