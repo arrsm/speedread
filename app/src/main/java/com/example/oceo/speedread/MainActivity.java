@@ -280,6 +280,7 @@ public class MainActivity extends AppCompatActivity {
 
             ArrayList<String> contents = getSomeText2(book); // TODO obviously need to refactor this
             Log.d("size of stuff: ", String.valueOf(contents.size()));
+            // TODO hardcoding the chapter here is not so good want to avoid pulling whole book at a time too
             fullText = new StringBuilder(contents.get(15));
 
 
@@ -290,28 +291,6 @@ public class MainActivity extends AppCompatActivity {
         return fullText;
     }
 
-    private void logTableOfContents(List<TOCReference> tocReferences, int depth) {
-        /**
-         * belongs to above fn
-         * Recursively Log the Table of Contents
-         *
-         * @param tocReferences
-         * @param depth
-         */
-        if (tocReferences == null) {
-            return;
-        }
-        for (TOCReference tocReference : tocReferences) {
-            StringBuilder tocString = new StringBuilder();
-            for (int i = 0; i < depth; i++) {
-                tocString.append("\t");
-            }
-            tocString.append(tocReference.getTitle());
-            Log.i("epublib", tocString.toString());
-
-//            logTableOfContents(tocReference.getChildren(), depth + 1);
-        }
-    }
 
     private ArrayList<String> getSomeText2(Book book) {
         StringBuilder string = new StringBuilder();
@@ -328,7 +307,7 @@ public class MainActivity extends AppCompatActivity {
                 is = res.getInputStream();
                 reader = new BufferedReader(new InputStreamReader(is));
                 while ((line = reader.readLine()) != null) {
-                    System.out.println(line);
+//                    System.out.println(line);
                     // FIRST PAGE LINE -> <?xml version="1.0" encoding="utf-8" standalone="no"?>
                     if (line.contains("<html")) {
 //                        string.delete(0, string.length()); // is this better?
@@ -354,6 +333,69 @@ public class MainActivity extends AppCompatActivity {
         return listOfPages;
     }
 
+    private ArrayList<String> getChapter(Book book, Spine spine, int spineLocation) {
+        StringBuilder string = new StringBuilder();
+        if (spineLocation > spine.size()) {
+            return null;
+        }
+        Resource res;
+        InputStream is;
+        BufferedReader reader;
+        String line;
+        ArrayList<String> bookSection = new ArrayList<String>();
+
+        res = spine.getResource(spineLocation);
+        try {
+            is = res.getInputStream();
+            reader = new BufferedReader(new InputStreamReader(is));
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("<html")) {
+//                        string.delete(0, string.length()); // is this better?
+                    string = new StringBuilder();
+                }
+
+                // ADD THAT LINE TO THE FINAL STRING REMOVING ALL THE HTML
+                if (!line.contains("<title>")) {
+                    Spanned HTMLText = Html.fromHtml(formatLine(line));
+                    string.append(HTMLText);
+                }
+
+                // LAST PAGE LINE -> </html>
+                if (line.contains("</html>")) {
+                    bookSection.add(string.toString());
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return bookSection;
+
+
+    }
+
+    private void logTableOfContents(List<TOCReference> tocReferences, int depth) {
+        /**
+         * belongs to above fn
+         * Recursively Log the Table of Contents
+         *
+         * @param tocReferences
+         * @param depth
+         */
+        if (tocReferences == null) {
+            return;
+        }
+        for (TOCReference tocReference : tocReferences) {
+            StringBuilder tocString = new StringBuilder();
+            for (int i = 0; i < depth; i++) {
+                tocString.append("\t");
+            }
+            tocString.append(tocReference.getTitle());
+            Log.i("epublib", tocString.toString());
+
+//            logTableOfContents(tocReference.getChildren(), depth + 1);
+        }
+    }
 
     private String formatLine(String line) {
         /*
