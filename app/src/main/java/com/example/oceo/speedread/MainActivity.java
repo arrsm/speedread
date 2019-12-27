@@ -82,22 +82,32 @@ public class MainActivity extends AppCompatActivity {
 
         currentWordView = findViewById(R.id.current_word);
         fullStoryView = findViewById(R.id.file_test);
-        readSampleEpub();
-
 //        fullText = readSampleFile();
-        fullText = readSampleEpub();
+//        fullText = readSampleEpub();
+        int chapterNumber = 15;
+        fullText = new StringBuilder(readSampleChapter(chapterNumber));
         setStoryContent(fullText);
 
         // TODO store max size in prefs so we dont have to calculate each open
         StringTokenizer tokens = countWordsUsingStringTokenizer(fullText.toString());
-//        maxWordIdx = tokens.countTokens();
+        maxWordIdx = tokens.countTokens();
         story = tokensToArrayList(tokens);
-        maxWordIdx = story.size();
-//        Log.d(TAG, String.valueOf(maxWordIdx));
 
-        iterateWordsInStory();
+        iterateWordChunks();
+//        iterateWordsInStory();
     }
 
+    public StringBuilder chunkTextIntoWords(ArrayList<String> tokens, int chunkSize) {
+        // TODO must I use the global var here
+        // TODO probably fails words the end
+        StringBuilder displayStr = new StringBuilder();
+        int chunkMax = currentWordIdx + chunkSize;
+        while (currentWordIdx < chunkMax) {
+            displayStr.append(tokens.get(currentWordIdx) + " ");
+            currentWordIdx++;
+        }
+        return displayStr;
+    }
 
     void initTimer() {
         /*
@@ -184,6 +194,23 @@ public class MainActivity extends AppCompatActivity {
         return Math.round(1000.0 / (WPM / 60.0));
     }
 
+    public void iterateWordChunks() {
+        currentWordView.setText(story.get(currentWordIdx));
+        Runnable runnable = new Runnable() {
+            public void run() {
+                // TODO magic seven
+                if (currentWordIdx < (maxWordIdx - 7)) {
+                    StringBuilder displayStr = chunkTextIntoWords(story, 6);
+                    currentWordView.setText(displayStr.toString());
+                    storyWordsIterationHandler.postDelayed(this, WPM_MS * 5);
+                } else {
+                    storyWordsIterationHandler.removeCallbacks(this);
+                }
+            }
+        };
+        runnable.run();
+    }
+
     public void iterateWordsInStory() {
         currentWordView.setText(story.get(currentWordIdx));
         Runnable runnable = new Runnable() {
@@ -256,7 +283,59 @@ public class MainActivity extends AppCompatActivity {
 //        }
     }
 
+
+    public String readSampleChapter(int chapterNumber) {
+        // TODO test if invalid chapter passed in
+        String chapterContents;
+        Book book = getBook();
+        Spine spine = book.getSpine();
+        chapterContents = getChapter(book, spine, chapterNumber);
+        return chapterContents;
+    }
+
+    public Book getBook() {
+        // TODO allow file system selection
+        File sdcard = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        String fName = "Malazan 10 - The Crippled God - Erikson_ Steven.epub";
+        File file = new File(sdcard, fName);
+        Book book = null;
+        // TODO check permissions here
+        try {
+            InputStream epubInputStream = new FileInputStream(file.toString());
+            book = (new EpubReader()).readEpub(epubInputStream);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return book;
+    }
+
+    private String getChapter(Book book, Spine spine, int spineLocation) {
+        if (spineLocation > spine.size()) {
+            return null;
+        }
+        StringBuilder string = new StringBuilder();
+        Resource res;
+        InputStream is;
+        BufferedReader reader;
+        String line;
+        res = spine.getResource(spineLocation);
+        try {
+            is = res.getInputStream();
+            reader = new BufferedReader(new InputStreamReader(is));
+            while ((line = reader.readLine()) != null) {
+                if (!line.contains("<title>")) {
+                    Spanned HTMLText = Html.fromHtml(formatLine(line));
+                    string.append(HTMLText);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return string.toString();
+    }
+
     public StringBuilder readSampleEpub() {
+        //DEPRECATED use chapters instead
         StringBuilder fullText = new StringBuilder();
         File sdcard = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
         String fName = "Malazan 10 - The Crippled God - Erikson_ Steven.epub";
@@ -283,7 +362,6 @@ public class MainActivity extends AppCompatActivity {
             // TODO hardcoding the chapter here is not so good want to avoid pulling whole book at a time too
             fullText = new StringBuilder(contents.get(15));
 
-
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -291,8 +369,8 @@ public class MainActivity extends AppCompatActivity {
         return fullText;
     }
 
-
     private ArrayList<String> getSomeText2(Book book) {
+        // deprecated with readSampleEpub
         StringBuilder string = new StringBuilder();
         ArrayList<String> listOfPages = new ArrayList<>();
         Resource res;
@@ -333,46 +411,6 @@ public class MainActivity extends AppCompatActivity {
         return listOfPages;
     }
 
-    private ArrayList<String> getChapter(Book book, Spine spine, int spineLocation) {
-        StringBuilder string = new StringBuilder();
-        if (spineLocation > spine.size()) {
-            return null;
-        }
-        Resource res;
-        InputStream is;
-        BufferedReader reader;
-        String line;
-        ArrayList<String> bookSection = new ArrayList<String>();
-
-        res = spine.getResource(spineLocation);
-        try {
-            is = res.getInputStream();
-            reader = new BufferedReader(new InputStreamReader(is));
-            while ((line = reader.readLine()) != null) {
-                if (line.contains("<html")) {
-//                        string.delete(0, string.length()); // is this better?
-                    string = new StringBuilder();
-                }
-
-                // ADD THAT LINE TO THE FINAL STRING REMOVING ALL THE HTML
-                if (!line.contains("<title>")) {
-                    Spanned HTMLText = Html.fromHtml(formatLine(line));
-                    string.append(HTMLText);
-                }
-
-                // LAST PAGE LINE -> </html>
-                if (line.contains("</html>")) {
-                    bookSection.add(string.toString());
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return bookSection;
-
-
-    }
 
     private void logTableOfContents(List<TOCReference> tocReferences, int depth) {
         /**
@@ -413,6 +451,5 @@ public class MainActivity extends AppCompatActivity {
         }
         return line;
     }
-
 
 }
