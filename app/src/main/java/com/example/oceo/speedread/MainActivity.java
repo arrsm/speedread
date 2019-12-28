@@ -29,11 +29,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.StringTokenizer;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
+import io.reactivex.android.schedulers.AndroidSchedulers;
 import nl.siegmann.epublib.domain.Author;
 import nl.siegmann.epublib.domain.Book;
 import nl.siegmann.epublib.domain.Metadata;
@@ -41,6 +44,10 @@ import nl.siegmann.epublib.domain.Resource;
 import nl.siegmann.epublib.domain.Spine;
 import nl.siegmann.epublib.domain.TOCReference;
 import nl.siegmann.epublib.epub.EpubReader;
+
+import com.example.oceo.speedread.SpeedReadUtilities.*;
+
+import io.reactivex.Observable;
 
 //TODO check file permissions
 // file selection tool
@@ -57,20 +64,22 @@ public class MainActivity extends AppCompatActivity {
     String TAG = "MainActivity";
     private long WPM;
     private long WPM_MS;
-    private int currentWordIdx;
-    private int maxWordIdx;
+    private int currentWordIdx; // current word being iterated over
+    private int maxWordIdx; // last word in chapter
+    private int chunkIdx; // word being iterated over in chunk
+    private int currentChapter;
     protected StringBuilder fullText; // holds full story in memory
     private ArrayList<String> story; // fullText converted to arraylist
-    private Handler storyWordsIterationHandler = new Handler();
-    private Handler boldIterator = new Handler();
     private TextView fullStoryView;
     private TextView currentWordView;
     private Button raiseWPMButton;
     private Button lowerWPMButton;
+    private TextView currentChapterview;
+    private Button raiseChapterButton;
+    private Button lowerChapterButton;
     private TextView WPM_view;
-    private int chunkSize;
-    private int chunkIdx;
-    private ArrayList<StringBuilder> displayStrs;
+    private int chunkSize; // number of words displayed as focus
+    private ArrayList<StringBuilder> displayStrs; // crutch to display bolded words. would like to change
 
     //long held incrementers
     Timer fixedTimer = new Timer();
@@ -80,25 +89,37 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        currentChapter = 0;
 
         setDefaultValues();
         setupWPMControls();
+        setupChapterControls();
 
         currentWordView = findViewById(R.id.current_word);
         fullStoryView = findViewById(R.id.file_test);
-//        fullText = readSampleFile();
-//        fullText = readSampleEpub();
-        int chapterNumber = 15;
-        fullText = new StringBuilder(readSampleChapter(chapterNumber));
+
+        readStory();
+
+
+    }
+
+    public void readStory() {
+        resetStoryGlobals();
+        fullText = new StringBuilder(readSampleChapter(currentChapter));
         setStoryContent(fullText);
 
         // TODO store max size in prefs so we dont have to calculate each open
         StringTokenizer tokens = countWordsUsingStringTokenizer(fullText.toString());
-        maxWordIdx = tokens.countTokens();
-        story = tokensToArrayList(tokens);
+        if (tokens != null) {
+            maxWordIdx = tokens.countTokens();
+            story = tokensToArrayList(tokens);
+        }
+        iterateWordChunksRX();
+    }
 
-        iterateWordChunks();
-//        iterateWordsInStory();
+    public void resetStoryGlobals() {
+        currentWordIdx = 0;
+        chunkIdx = 0;
     }
 
     public StringBuilder chunkTextIntoWords(ArrayList<String> tokens, int chunkSize) {
@@ -119,21 +140,30 @@ public class MainActivity extends AppCompatActivity {
         // TODO probably fails words the end
         int chunkStart = currentWordIdx;
         int chunkMax = chunkStart + chunkSize;
+        if (maxWordIdx < chunkMax) {
+            chunkMax = maxWordIdx;
+        }
+
         ArrayList<StringBuilder> displayStrs = new ArrayList<StringBuilder>();
 
         int targetWord = chunkStart;
         while (targetWord < chunkMax) {
             StringBuilder formattedDisplayStr = new StringBuilder();
             for (int i = chunkStart; i < chunkMax; i++) {
+
+
                 if (targetWord == i) {
                     formattedDisplayStr.append("<b>" + tokens.get(i) + "</b> ");
                 } else {
                     formattedDisplayStr.append(tokens.get(i) + " ");
                 }
+
             }
+
             displayStrs.add(formattedDisplayStr);
             targetWord++;
             currentWordIdx++;
+
         }
         return displayStrs;
     }
@@ -143,6 +173,36 @@ public class MainActivity extends AppCompatActivity {
             timer currently used for: long-pressing wpm inc/dec
          */
         fixedTimer = new Timer();
+    }
+
+    public void setupChapterControls() {
+
+        raiseChapterButton = findViewById(R.id.raise_chpt_button);
+        lowerChapterButton = findViewById(R.id.lower_chpt_btn);
+        currentChapterview = findViewById(R.id.current_chapter);
+
+
+        raiseChapterButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                currentChapter += 1;
+                currentChapterview.setText(String.valueOf(currentChapter + 1));
+                resetStoryGlobals();
+                readStory();
+            }
+        });
+
+
+        lowerChapterButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                currentChapter -= 1;
+                currentChapterview.setText(String.valueOf(currentChapter + 1));
+                resetStoryGlobals();
+                readStory();
+            }
+        });
+
+        currentChapterview.setText(String.valueOf(currentChapter + 1));
+
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -155,7 +215,7 @@ public class MainActivity extends AppCompatActivity {
         raiseWPMButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 WPM += 1;
-                WPM_MS = WPMtoMS(WPM);
+                WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
                 WPM_view.setText(String.valueOf(WPM));
             }
         });
@@ -174,7 +234,7 @@ public class MainActivity extends AppCompatActivity {
                 } else if (event.getAction() == MotionEvent.ACTION_UP) {
                     fixedTimer.cancel();
                     initTimer();
-                    WPM_MS = WPMtoMS(WPM);
+                    WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
                 }
                 return false;
             }
@@ -184,7 +244,7 @@ public class MainActivity extends AppCompatActivity {
         lowerWPMButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 WPM -= 1;
-                WPM_MS = WPMtoMS(WPM);
+                WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
                 WPM_view.setText(String.valueOf(WPM));
             }
         });
@@ -202,7 +262,7 @@ public class MainActivity extends AppCompatActivity {
                 } else if (event.getAction() == MotionEvent.ACTION_UP) {
                     fixedTimer.cancel();
                     initTimer();
-                    WPM_MS = WPMtoMS(WPM);
+                    WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
                 }
 
                 return false;
@@ -214,66 +274,35 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setDefaultValues() {
-        WPM = 100;
-        WPM_MS = WPMtoMS(WPM);
-        currentWordIdx = 0;
+        WPM = 175;
+        WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
         chunkSize = 15;
+        resetStoryGlobals();
+    }
+
+    public void iterateWordChunksRX() {
+        int chunkStartIdx = currentWordIdx;
+        int chunkMaxIdx = chunkStartIdx + chunkSize;
         chunkIdx = 0;
-    }
-
-    private long WPMtoMS(long WPM) {
-        return Math.round(1000.0 / (WPM / 60.0));
-    }
-
-    public void iterateWordChunks() {
-        currentWordView.setText(story.get(currentWordIdx));
-        Runnable runnable = new Runnable() {
-            public void run() {
-                if (currentWordIdx < (maxWordIdx - chunkSize - 1)) {
-                    iterateWordChunksFormatted();
-                    // TODO cycling the displayed chunk vs scrolling it if possible
-                    storyWordsIterationHandler.postDelayed(this, WPM_MS * chunkSize + 1);
-                } else {
-                    storyWordsIterationHandler.removeCallbacks(this);
-                }
-            }
-        };
-        runnable.run();
-    }
-
-
-    public void iterateWordChunksFormatted() {
-        currentWordView.setText(story.get(currentWordIdx));
         displayStrs = chunkTextIntoWordsAndFormat(story, chunkSize);
-        Runnable runnable = new Runnable() {
-            public void run() {
-                if (chunkIdx < chunkSize) {
-                    currentWordView.setText(Html.fromHtml(displayStrs.get(chunkIdx).toString())); //TODO iterate the bolded words
-                    chunkIdx++;
-                    boldIterator.postDelayed(this, WPM_MS);
-                } else {
-                    boldIterator.removeCallbacks(this);
-                    chunkIdx = 0;
-                }
-            }
-        };
-        runnable.run();
-    }
-
-    public void iterateWordsInStory() {
-        currentWordView.setText(story.get(currentWordIdx));
-        Runnable runnable = new Runnable() {
-            public void run() {
-                if (currentWordIdx < (maxWordIdx - 1)) {
-                    currentWordIdx++;
-                    currentWordView.setText(story.get(currentWordIdx));
-                    storyWordsIterationHandler.postDelayed(this, WPM_MS);
-                } else {
-                    storyWordsIterationHandler.removeCallbacks(this);
-                }
-            }
-        };
-        runnable.run();
+        Observable.interval(WPM_MS, TimeUnit.MILLISECONDS)
+                .observeOn(AndroidSchedulers.mainThread())
+                .take(chunkMaxIdx - chunkStartIdx)
+                .subscribe(wordIdx -> {
+//                            Log.d("the max", String.valueOf(chunkIdx));
+                            if (chunkIdx < displayStrs.size()) { // check we dont go out of bounds
+                                currentWordView.setText(Html.fromHtml(displayStrs.get(chunkIdx).toString())); //TODO iterate the bolded words
+                                chunkIdx++;
+                            }
+                        }, e -> e.printStackTrace(),
+                        () -> {
+                            if (currentWordIdx < maxWordIdx) {
+                                iterateWordChunksRX();
+                            } else {
+                                Log.d("Observable", "No more chunks");
+                            }
+                        }
+                );
     }
 
     public void setStoryContent(StringBuilder fullText) {
@@ -299,31 +328,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public StringBuilder readSampleFile() {
-        //requires file.txt to be present in downloads directory
-        String TAG = "MA readSampleFile: ";
-        File sdcard = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        File file = new File(sdcard, "file.txt");
-
-        StringBuilder fullText = new StringBuilder();
-
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(file));
-            String line;
-            while ((line = br.readLine()) != null) {
-//                Log.d(TAG, line);
-                fullText.append(line);
-//                fullText.append('\n');
-            }
-            br.close();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            //TODO handle errors here
-        }
-        return fullText;
-    }
-
     public void listFiles() {
         File sdcard = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
         File[] files = sdcard.listFiles();
@@ -332,13 +336,12 @@ public class MainActivity extends AppCompatActivity {
 //        }
     }
 
-
     public String readSampleChapter(int chapterNumber) {
         // TODO test if invalid chapter passed in
         String chapterContents;
         Book book = getBook();
         Spine spine = book.getSpine();
-        chapterContents = getChapter(book, spine, chapterNumber);
+        chapterContents = getChapter(spine, chapterNumber);
         return chapterContents;
     }
 
@@ -358,7 +361,7 @@ public class MainActivity extends AppCompatActivity {
         return book;
     }
 
-    private String getChapter(Book book, Spine spine, int spineLocation) {
+    private String getChapter(Spine spine, int spineLocation) {
         if (spineLocation > spine.size()) {
             return null;
         }
@@ -383,106 +386,6 @@ public class MainActivity extends AppCompatActivity {
         return string.toString();
     }
 
-    public StringBuilder readSampleEpub() {
-        //DEPRECATED use chapters instead
-        StringBuilder fullText = new StringBuilder();
-        File sdcard = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        String fName = "Malazan 10 - The Crippled God - Erikson_ Steven.epub";
-        File file = new File(sdcard, fName);
-
-        try {
-            InputStream epubInputStream = new FileInputStream(file.toString());
-            // Load Book from inputStream
-            Book book = (new EpubReader()).readEpub(epubInputStream);
-            // Log the book's authors
-            Log.d("epublib", "author(s): " + book.getMetadata().getAuthors());
-            // Log the book's title
-            Log.d("epublib", "title: " + book.getTitle());
-            // Log the book's coverimage property
-            Bitmap coverImage = BitmapFactory.decodeStream(book.getCoverImage()
-                    .getInputStream());
-            Log.d("epublib", "Coverimage is " + coverImage.getWidth() + " by "
-                    + coverImage.getHeight() + " pixels");
-            // Log the tale of contents
-            logTableOfContents(book.getTableOfContents().getTocReferences(), 0);
-
-            ArrayList<String> contents = getSomeText2(book); // TODO obviously need to refactor this
-            Log.d("size of stuff: ", String.valueOf(contents.size()));
-            // TODO hardcoding the chapter here is not so good want to avoid pulling whole book at a time too
-            fullText = new StringBuilder(contents.get(15));
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return fullText;
-    }
-
-    private ArrayList<String> getSomeText2(Book book) {
-        // deprecated with readSampleEpub
-        StringBuilder string = new StringBuilder();
-        ArrayList<String> listOfPages = new ArrayList<>();
-        Resource res;
-        InputStream is;
-        BufferedReader reader;
-        String line;
-        Spine spine = book.getSpine();
-
-        for (int i = 0; i < spine.size(); i++) {
-            res = spine.getResource(i);
-            try {
-                is = res.getInputStream();
-                reader = new BufferedReader(new InputStreamReader(is));
-                while ((line = reader.readLine()) != null) {
-//                    System.out.println(line);
-                    // FIRST PAGE LINE -> <?xml version="1.0" encoding="utf-8" standalone="no"?>
-                    if (line.contains("<html")) {
-//                        string.delete(0, string.length()); // is this better?
-                        string = new StringBuilder();
-                    }
-
-                    // ADD THAT LINE TO THE FINAL STRING REMOVING ALL THE HTML
-                    if (!line.contains("<title>")) {
-                        Spanned HTMLText = Html.fromHtml(formatLine(line));
-                        string.append(HTMLText);
-                    }
-
-                    // LAST PAGE LINE -> </html>
-                    if (line.contains("</html>")) {
-                        listOfPages.add(string.toString());
-                    }
-
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return listOfPages;
-    }
-
-
-    private void logTableOfContents(List<TOCReference> tocReferences, int depth) {
-        /**
-         * belongs to above fn
-         * Recursively Log the Table of Contents
-         *
-         * @param tocReferences
-         * @param depth
-         */
-        if (tocReferences == null) {
-            return;
-        }
-        for (TOCReference tocReference : tocReferences) {
-            StringBuilder tocString = new StringBuilder();
-            for (int i = 0; i < depth; i++) {
-                tocString.append("\t");
-            }
-            tocString.append(tocReference.getTitle());
-            Log.i("epublib", tocString.toString());
-
-//            logTableOfContents(tocReference.getChildren(), depth + 1);
-        }
-    }
 
     private String formatLine(String line) {
         /*
