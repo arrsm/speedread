@@ -37,6 +37,7 @@ import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
 import nl.siegmann.epublib.domain.Author;
 import nl.siegmann.epublib.domain.Book;
 import nl.siegmann.epublib.domain.Metadata;
@@ -68,18 +69,22 @@ public class MainActivity extends AppCompatActivity {
     private int maxWordIdx; // last word in chapter
     private int chunkIdx; // word being iterated over in chunk
     private int currentChapter;
+    private int chunkSize; // number of words displayed as focus
     protected StringBuilder fullText; // holds full story in memory
     private ArrayList<String> story; // fullText converted to arraylist
     private TextView fullStoryView;
     private TextView currentWordView;
+    private TextView currentChunkView;
     private Button raiseWPMButton;
     private Button lowerWPMButton;
     private TextView currentChapterview;
     private Button raiseChapterButton;
     private Button lowerChapterButton;
     private TextView WPM_view;
-    private int chunkSize; // number of words displayed as focus
+    private Button pauseButton;
     private ArrayList<StringBuilder> displayStrs; // crutch to display bolded words. would like to change
+
+    Disposable disposableReader;
 
     //long held incrementers
     Timer fixedTimer = new Timer();
@@ -89,18 +94,37 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        currentChapter = 0;
+        currentChapter = 15;
 
         setDefaultValues();
         setupWPMControls();
         setupChapterControls();
+        pauseButton = findViewById(R.id.pause_button);
 
+        pauseButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if (!disposableReader.isDisposed()) {
+                    Log.d("pause test", "PAUSE IT");
+                    disposableReader.dispose();
+                } else {
+                    resumeStory();
+                }
+
+            }
+        });
+
+
+        currentChunkView = findViewById(R.id.current_chunk);
         currentWordView = findViewById(R.id.current_word);
         fullStoryView = findViewById(R.id.file_test);
 
         readStory();
 
 
+    }
+
+    public void resumeStory() {
+        iterateWordChunksRX();
     }
 
     public void readStory() {
@@ -114,6 +138,7 @@ public class MainActivity extends AppCompatActivity {
             maxWordIdx = tokens.countTokens();
             story = tokensToArrayList(tokens);
         }
+        // TODO heres a good place to end this method
         iterateWordChunksRX();
     }
 
@@ -122,20 +147,8 @@ public class MainActivity extends AppCompatActivity {
         chunkIdx = 0;
     }
 
-    public StringBuilder chunkTextIntoWords(ArrayList<String> tokens, int chunkSize) {
-        // TODO must I use the global var here
-        // TODO probably fails words the end
-        // deprecated for the bolding functionality
-        StringBuilder displayStr = new StringBuilder();
-        int chunkMax = currentWordIdx + chunkSize;
-        while (currentWordIdx < chunkMax) {
-            displayStr.append(tokens.get(currentWordIdx) + " ");
-            currentWordIdx++;
-        }
-        return displayStr;
-    }
-
-    public ArrayList<StringBuilder> chunkTextIntoWordsAndFormat(ArrayList<String> tokens, int chunkSize) {
+    public ArrayList<StringBuilder> getNextChunk(ArrayList<String> tokens, int chunkSize) {
+        // this method based off chunk size. sister method buildBoldSentences based off of punctation
         // TODO must I use the global var here
         // TODO probably fails words the end
         int chunkStart = currentWordIdx;
@@ -151,21 +164,91 @@ public class MainActivity extends AppCompatActivity {
             StringBuilder formattedDisplayStr = new StringBuilder();
             for (int i = chunkStart; i < chunkMax; i++) {
 
-
                 if (targetWord == i) {
                     formattedDisplayStr.append("<b>" + tokens.get(i) + "</b> ");
                 } else {
                     formattedDisplayStr.append(tokens.get(i) + " ");
                 }
-
             }
 
             displayStrs.add(formattedDisplayStr);
             targetWord++;
-            currentWordIdx++;
 
         }
         return displayStrs;
+    }
+
+    public int getNextSentence(ArrayList<String> tokens) {
+        int tempChunkIdx = currentWordIdx;
+        while (!tokens.get(tempChunkIdx).contains(".")) {
+//            Log.d("what", tokens.get(tempChunkIdx));
+            tempChunkIdx++;
+        }
+//        Log.d("what NADA", tokens.get(tempChunkIdx));
+        return tempChunkIdx + 1;
+    }
+
+    public ArrayList<StringBuilder> buildBoldSentences(int startIdx, int endIdx) {
+        int numStrings = endIdx - startIdx;
+        ArrayList<StringBuilder> displayStrs = new ArrayList<StringBuilder>();
+
+        for (int targetWord = startIdx; targetWord < startIdx + numStrings; targetWord++) {
+            StringBuilder formattedDisplayStr = new StringBuilder();
+
+            for (int i = startIdx; i < endIdx; i++) {
+                if (targetWord == i) {
+                    formattedDisplayStr.append("<b>" + story.get(i) + "</b> ");
+                } else {
+                    formattedDisplayStr.append(story.get(i) + " ");
+                }
+            }
+            displayStrs.add(formattedDisplayStr);
+        }
+
+        return displayStrs;
+    }
+
+    public void setDefaultValues() {
+        WPM = 175;
+        WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
+        chunkSize = 30;
+        resetStoryGlobals();
+    }
+
+    public void iterateWordChunksRX() {
+        int chunkStartIdx = currentWordIdx;
+        int chunkMaxIdx = getNextSentence(story);
+        displayStrs = buildBoldSentences(chunkStartIdx, chunkMaxIdx);
+
+        Observable<Long> intervalObservable = Observable.interval(WPM_MS, TimeUnit.MILLISECONDS)
+                .observeOn(AndroidSchedulers.mainThread())
+                .take(chunkMaxIdx - chunkStartIdx);
+
+//        intervalObservable = intervalObservable.doOnDispose(() -> {
+//            Log.d("OBs test", "I have been disposed of");
+//        });
+
+
+        disposableReader = intervalObservable.subscribe(wordIdx -> {
+                    if (chunkIdx < displayStrs.size()) { // check we dont go out of bounds
+                        currentChunkView.setText(Html.fromHtml(displayStrs.get(chunkIdx).toString()));
+                        currentWordView.setText(story.get(currentWordIdx));
+                        chunkIdx++;
+                        currentWordIdx++;
+                    }
+
+                }, e -> e.printStackTrace(),
+                () -> {
+                    if (currentWordIdx < maxWordIdx) {
+                        // reset position and scroll through next chunk
+                        chunkIdx = 0;
+                        Log.d("obs", "k do the next chunk");
+                        iterateWordChunksRX();
+                    } else {
+                        Log.d("Observable", "No more chunks");
+                    }
+                }
+        );
     }
 
     void initTimer() {
@@ -185,7 +268,8 @@ public class MainActivity extends AppCompatActivity {
         raiseChapterButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 currentChapter += 1;
-                currentChapterview.setText(String.valueOf(currentChapter + 1));
+                currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
+                disposableReader.dispose();
                 resetStoryGlobals();
                 readStory();
             }
@@ -195,13 +279,14 @@ public class MainActivity extends AppCompatActivity {
         lowerChapterButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 currentChapter -= 1;
-                currentChapterview.setText(String.valueOf(currentChapter + 1));
+                currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
+                disposableReader.dispose();
                 resetStoryGlobals();
                 readStory();
             }
         });
 
-        currentChapterview.setText(String.valueOf(currentChapter + 1));
+        currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
 
     }
 
@@ -273,38 +358,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void setDefaultValues() {
-        WPM = 175;
-        WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
-        chunkSize = 15;
-        resetStoryGlobals();
-    }
-
-    public void iterateWordChunksRX() {
-        int chunkStartIdx = currentWordIdx;
-        int chunkMaxIdx = chunkStartIdx + chunkSize;
-        chunkIdx = 0;
-        displayStrs = chunkTextIntoWordsAndFormat(story, chunkSize);
-        Observable.interval(WPM_MS, TimeUnit.MILLISECONDS)
-                .observeOn(AndroidSchedulers.mainThread())
-                .take(chunkMaxIdx - chunkStartIdx)
-                .subscribe(wordIdx -> {
-//                            Log.d("the max", String.valueOf(chunkIdx));
-                            if (chunkIdx < displayStrs.size()) { // check we dont go out of bounds
-                                currentWordView.setText(Html.fromHtml(displayStrs.get(chunkIdx).toString())); //TODO iterate the bolded words
-                                chunkIdx++;
-                            }
-                        }, e -> e.printStackTrace(),
-                        () -> {
-                            if (currentWordIdx < maxWordIdx) {
-                                iterateWordChunksRX();
-                            } else {
-                                Log.d("Observable", "No more chunks");
-                            }
-                        }
-                );
-    }
-
     public void setStoryContent(StringBuilder fullText) {
         fullStoryView.setText(fullText);
         fullStoryView.setMovementMethod(new ScrollingMovementMethod());
@@ -328,13 +381,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void listFiles() {
-        File sdcard = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        File[] files = sdcard.listFiles();
-//        for (int i = 0; i < files.length; i++) {
-//            Log.d("File: ", files[i].getName());
-//        }
-    }
 
     public String readSampleChapter(int chapterNumber) {
         // TODO test if invalid chapter passed in
