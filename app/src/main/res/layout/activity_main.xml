@@ -7,6 +7,31 @@
     android:orientation="vertical"
     tools:context=".MainActivity">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/lower_chpt_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=" - " />
+
+        <TextView
+            android:id="@+id/current_chapter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="10dp" />
+
+
+        <Button
+            android:id="@+id/raise_chpt_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=" + " />
+
+    </LinearLayout>
 
     <TextView
         android:id="@+id/current_word"
