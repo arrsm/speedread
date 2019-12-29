@@ -56,6 +56,9 @@ import com.example.oceo.speedread.PrefsUtil;
 // indication for when reading is happening
 // scroll up or down to get to previous lines. eg if iw ant to reread a paragraph
 // keep track of start and end indexes to have better resume experience
+// delay on sentence end
+// take some time to think about when exactly globals need to be reset and if they need to be global at all
+// play with delimeter settings
 
 public class MainActivity extends AppCompatActivity {
 
@@ -166,36 +169,6 @@ public class MainActivity extends AppCompatActivity {
         chunkIdx = 0;
     }
 
-    public ArrayList<StringBuilder> getNextChunk(ArrayList<String> tokens, int chunkSize) {
-        // this method based off chunk size. sister method buildBoldSentences based off of punctation
-        // TODO must I use the global var here
-        // TODO probably fails words the end
-        int chunkStart = currentWordIdx;
-        int chunkMax = chunkStart + chunkSize;
-        if (maxWordIdx < chunkMax) {
-            chunkMax = maxWordIdx;
-        }
-
-        ArrayList<StringBuilder> displayStrs = new ArrayList<StringBuilder>();
-
-        int targetWord = chunkStart;
-        while (targetWord < chunkMax) {
-            StringBuilder formattedDisplayStr = new StringBuilder();
-            for (int i = chunkStart; i < chunkMax; i++) {
-
-                if (targetWord == i) {
-                    formattedDisplayStr.append("<b>" + tokens.get(i) + "</b> ");
-                } else {
-                    formattedDisplayStr.append(tokens.get(i) + " ");
-                }
-            }
-
-            displayStrs.add(formattedDisplayStr);
-            targetWord++;
-
-        }
-        return displayStrs;
-    }
 
     public int getNextSentences(ArrayList<String> tokens, int numSentences) {
         // TODO also keep track of where the sentences end for formatting
@@ -204,7 +177,10 @@ public class MainActivity extends AppCompatActivity {
 
 
         while (foundSentences < numSentences) {
-            while (tempChunkIdx < maxWordIdx && !tokens.get(tempChunkIdx).contains(".")) {
+            while (tempChunkIdx < maxWordIdx &&
+                    (!tokens.get(tempChunkIdx).contains(".")
+                            || tokens.get(tempChunkIdx).contains("?")
+                            || tokens.get(tempChunkIdx).contains("!"))) {
                 tempChunkIdx++;
             }
             tempChunkIdx += 1;
@@ -257,28 +233,12 @@ public class MainActivity extends AppCompatActivity {
         int chunkMaxIdx = getNextSentences(story, 1);
         displayStrs = buildBoldSentences(chunkStartIdx, chunkMaxIdx);
 
-
-//        Observable<Long> intervalObservable = Observable.interval(WPM_MS, TimeUnit.MILLISECONDS)
-//                .observeOn(AndroidSchedulers.mainThread())
-//                .take(chunkMaxIdx - chunkStartIdx);
-
-//        long startTime = System.currentTimeMillis();
-//        Observable.range(chunkStartIdx, chunkMaxIdx)
-//                .concatMap(i -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS))
-//                .doOnNext(i -> System.out.println(
-//                        "Item: " + i + ", Time: " + (System.currentTimeMillis() - startTime) + "ms")).subscribe();
-
         Observable rangeObs = Observable.range(currentWordIdx, chunkMaxIdx - currentWordIdx)
-                .concatMap(i -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS));
-
-        rangeObs = rangeObs.observeOn(AndroidSchedulers.mainThread());
-
-//        intervalObservable = intervalObservable.doOnDispose(() -> {
-//            Log.d("OBs test", "I have been disposed of");
-//        });
+                .concatMap(i -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS))
+                .observeOn(AndroidSchedulers.mainThread());
 
         disposableReader = rangeObs.subscribe(wordIdx -> {
-                    Log.d("The OBS", String.valueOf(wordIdx) + " / " + String.valueOf(chunkMaxIdx));
+//                    Log.d("The OBS", String.valueOf(wordIdx) + " / " + String.valueOf(chunkMaxIdx));
                     if (chunkIdx < displayStrs.size()) { // check we dont go out of bounds
                         currentChunkView.setText(Html.fromHtml(displayStrs.get(chunkIdx).toString()));
                         currentWordView.setText(story.get(currentWordIdx));
@@ -304,31 +264,6 @@ public class MainActivity extends AppCompatActivity {
                         Log.d("Observable", "No more chunks");
                     }
                 });
-
-        /*
-        disposableReader = rangeObs.subscribe(wordIdx -> {
-                    Log.d("The OBS", String.valueOf(wordIdx));
-                    if (chunkIdx < displayStrs.size()) { // check we dont go out of bounds
-                        currentChunkView.setText(Html.fromHtml(displayStrs.get(chunkIdx).toString()));
-                        currentWordView.setText(story.get(currentWordIdx));
-                        chunkIdx++;
-                        currentWordIdx++;
-                    }
-
-                }, e -> e.printStackTrace(),
-                () -> {
-                    if (currentWordIdx < maxWordIdx) {
-//                        Log.d("obs", "k do the next chunk");
-                        chunkIdx = 0;
-                        currSentenceStart = currentWordIdx;
-                        // reset position and scroll through next chunk
-                        iterateWordChunksRX();
-                    } else {
-                        Log.d("Observable", "No more chunks");
-                    }
-                }
-        );
-        */
     }
 
     void initTimer() {
@@ -452,7 +387,7 @@ public class MainActivity extends AppCompatActivity {
         if (words == null || words.isEmpty()) {
             return null;
         }
-        StringTokenizer tokens = new StringTokenizer(words);
+        StringTokenizer tokens = new StringTokenizer(words, " \t\n\r\f", false);
         return tokens;
     }
 
@@ -508,7 +443,10 @@ public class MainActivity extends AppCompatActivity {
             while ((line = reader.readLine()) != null) {
                 if (!line.contains("<title>")) {
                     Spanned HTMLText = Html.fromHtml(formatLine(line));
-                    string.append(HTMLText);
+                    if (HTMLText.length() > 0) {
+                        string.append(HTMLText);
+                        string.append(" ");
+                    }
                 }
             }
         } catch (IOException e) {
