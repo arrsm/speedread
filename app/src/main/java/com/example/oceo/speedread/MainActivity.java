@@ -2,6 +2,7 @@ package com.example.oceo.speedread;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
@@ -23,14 +24,11 @@ import android.widget.TextView;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.StringTokenizer;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -38,33 +36,36 @@ import java.util.concurrent.TimeUnit;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
-import nl.siegmann.epublib.domain.Author;
 import nl.siegmann.epublib.domain.Book;
-import nl.siegmann.epublib.domain.Metadata;
 import nl.siegmann.epublib.domain.Resource;
 import nl.siegmann.epublib.domain.Spine;
-import nl.siegmann.epublib.domain.TOCReference;
 import nl.siegmann.epublib.epub.EpubReader;
 
-import com.example.oceo.speedread.SpeedReadUtilities.*;
 
 import io.reactivex.Observable;
 
+import com.example.oceo.speedread.PrefsUtil;
+
 //TODO check file permissions
 // file selection tool
-// readSampleFile spits back the whole text in one variable. I do not think this is the right way
-// to go about that
+// write to prefs when app closed or minimized
 // can i count the number of words in file faster? currently converting StringBuilder to String and tokenizing
 // min values for WPM (setting to 0 for example will cause a never ending postdelayed call)
 // show values changing WHILE button held https://stackoverflow.com/questions/12071090/triggering-event-continuously-when-button-is-pressed-down-in-android
 // also prob cant touch both at the same time
-// determine how to chunk/reference epub parsings so we don't need to keep the whole book in memory
+// indication for when reading is happening
+// scroll up or down to get to previous lines. eg if iw ant to reread a paragraph
+// keep track of start and end indexes to have better resume experience
 
 public class MainActivity extends AppCompatActivity {
 
     String TAG = "MainActivity";
+    Activity activity;
+
     private long WPM;
     private long WPM_MS;
+    private int currSentenceStart;
+    private int currSentenceEnd;
     private int currentWordIdx; // current word being iterated over
     private int maxWordIdx; // last word in chapter
     private int chunkIdx; // word being iterated over in chunk
@@ -93,8 +94,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        activity = this;
         setContentView(R.layout.activity_main);
-        currentChapter = 15;
+
+
+        currentChapter = PrefsUtil.readChapterFromPrefs(this);
 
         setDefaultValues();
         setupWPMControls();
@@ -115,10 +119,25 @@ public class MainActivity extends AppCompatActivity {
 
 
         currentChunkView = findViewById(R.id.current_chunk);
+
+        currentChunkView.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if (!disposableReader.isDisposed()) {
+                    Log.d("pause test", "PAUSE IT");
+                    disposableReader.dispose();
+                } else {
+                    Log.d("resume test", "RESUME IT");
+                    resumeStory();
+                }
+
+            }
+        });
+
         currentWordView = findViewById(R.id.current_word);
         fullStoryView = findViewById(R.id.file_test);
 
         readStory();
+        iterateWordChunksRX();
 
 
     }
@@ -130,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
     public void readStory() {
         resetStoryGlobals();
         fullText = new StringBuilder(readSampleChapter(currentChapter));
-        setStoryContent(fullText);
+//        setStoryContent(fullText);
 
         // TODO store max size in prefs so we dont have to calculate each open
         StringTokenizer tokens = countWordsUsingStringTokenizer(fullText.toString());
@@ -138,11 +157,11 @@ public class MainActivity extends AppCompatActivity {
             maxWordIdx = tokens.countTokens();
             story = tokensToArrayList(tokens);
         }
-        // TODO heres a good place to end this method
-        iterateWordChunksRX();
     }
 
     public void resetStoryGlobals() {
+        currSentenceStart = 0;
+        currSentenceEnd = 0;
         currentWordIdx = 0;
         chunkIdx = 0;
     }
@@ -178,21 +197,35 @@ public class MainActivity extends AppCompatActivity {
         return displayStrs;
     }
 
-    public int getNextSentence(ArrayList<String> tokens) {
+    public int getNextSentences(ArrayList<String> tokens, int numSentences) {
+        // TODO also keep track of where the sentences end for formatting
         int tempChunkIdx = currentWordIdx;
-        while (!tokens.get(tempChunkIdx).contains(".")) {
-//            Log.d("what", tokens.get(tempChunkIdx));
-            tempChunkIdx++;
+        int foundSentences = 0;
+
+
+        while (foundSentences < numSentences) {
+            while (tempChunkIdx < maxWordIdx && !tokens.get(tempChunkIdx).contains(".")) {
+                tempChunkIdx++;
+            }
+            tempChunkIdx += 1;
+            foundSentences += 1;
+//            Log.d("sentenceCount: ", String.valueOf(foundSentences));
         }
 //        Log.d("what NADA", tokens.get(tempChunkIdx));
-        return tempChunkIdx + 1;
+        return tempChunkIdx;
     }
 
     public ArrayList<StringBuilder> buildBoldSentences(int startIdx, int endIdx) {
-        int numStrings = endIdx - startIdx;
+        // TODO wish there was a better way to do this rather than building and holding o(n^2)
+        //  strings in the number of words
+
+        if (maxWordIdx < endIdx) {
+            endIdx = maxWordIdx;
+        }
+
         ArrayList<StringBuilder> displayStrs = new ArrayList<StringBuilder>();
 
-        for (int targetWord = startIdx; targetWord < startIdx + numStrings; targetWord++) {
+        for (int targetWord = startIdx; targetWord < endIdx; targetWord++) {
             StringBuilder formattedDisplayStr = new StringBuilder();
 
             for (int i = startIdx; i < endIdx; i++) {
@@ -216,20 +249,65 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void iterateWordChunksRX() {
-        int chunkStartIdx = currentWordIdx;
-        int chunkMaxIdx = getNextSentence(story);
+        // TODO better way to do this is probably https://stackoverflow.com/questions/33291245/rxjava-delay-for-each-item-of-list-emitted
+        // check repeat as well
+
+
+        int chunkStartIdx = currSentenceStart;
+        int chunkMaxIdx = getNextSentences(story, 1);
         displayStrs = buildBoldSentences(chunkStartIdx, chunkMaxIdx);
 
-        Observable<Long> intervalObservable = Observable.interval(WPM_MS, TimeUnit.MILLISECONDS)
-                .observeOn(AndroidSchedulers.mainThread())
-                .take(chunkMaxIdx - chunkStartIdx);
+
+//        Observable<Long> intervalObservable = Observable.interval(WPM_MS, TimeUnit.MILLISECONDS)
+//                .observeOn(AndroidSchedulers.mainThread())
+//                .take(chunkMaxIdx - chunkStartIdx);
+
+//        long startTime = System.currentTimeMillis();
+//        Observable.range(chunkStartIdx, chunkMaxIdx)
+//                .concatMap(i -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS))
+//                .doOnNext(i -> System.out.println(
+//                        "Item: " + i + ", Time: " + (System.currentTimeMillis() - startTime) + "ms")).subscribe();
+
+        Observable rangeObs = Observable.range(currentWordIdx, chunkMaxIdx - currentWordIdx)
+                .concatMap(i -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS));
+
+        rangeObs = rangeObs.observeOn(AndroidSchedulers.mainThread());
 
 //        intervalObservable = intervalObservable.doOnDispose(() -> {
 //            Log.d("OBs test", "I have been disposed of");
 //        });
 
+        disposableReader = rangeObs.subscribe(wordIdx -> {
+                    Log.d("The OBS", String.valueOf(wordIdx) + " / " + String.valueOf(chunkMaxIdx));
+                    if (chunkIdx < displayStrs.size()) { // check we dont go out of bounds
+                        currentChunkView.setText(Html.fromHtml(displayStrs.get(chunkIdx).toString()));
+                        currentWordView.setText(story.get(currentWordIdx));
+                        chunkIdx++;
+                        currentWordIdx++;
+                    } else {
+                        // can reach here if we pause then resume
+                        Log.d("The OBS", "Is Out of Bounds");
+                    }
 
-        disposableReader = intervalObservable.subscribe(wordIdx -> {
+                },
+                e -> {
+
+                },
+                () -> {
+//                        Log.d("obs", "k do the next chunk");
+                    if (currentWordIdx < maxWordIdx) {
+                        chunkIdx = 0;
+                        currSentenceStart = currentWordIdx;
+                        // reset position and scroll through next chunk
+                        iterateWordChunksRX();
+                    } else {
+                        Log.d("Observable", "No more chunks");
+                    }
+                });
+
+        /*
+        disposableReader = rangeObs.subscribe(wordIdx -> {
+                    Log.d("The OBS", String.valueOf(wordIdx));
                     if (chunkIdx < displayStrs.size()) { // check we dont go out of bounds
                         currentChunkView.setText(Html.fromHtml(displayStrs.get(chunkIdx).toString()));
                         currentWordView.setText(story.get(currentWordIdx));
@@ -240,15 +318,17 @@ public class MainActivity extends AppCompatActivity {
                 }, e -> e.printStackTrace(),
                 () -> {
                     if (currentWordIdx < maxWordIdx) {
-                        // reset position and scroll through next chunk
+//                        Log.d("obs", "k do the next chunk");
                         chunkIdx = 0;
-                        Log.d("obs", "k do the next chunk");
+                        currSentenceStart = currentWordIdx;
+                        // reset position and scroll through next chunk
                         iterateWordChunksRX();
                     } else {
                         Log.d("Observable", "No more chunks");
                     }
                 }
         );
+        */
     }
 
     void initTimer() {
@@ -267,11 +347,13 @@ public class MainActivity extends AppCompatActivity {
 
         raiseChapterButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                currentChapter += 1;
-                currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
                 disposableReader.dispose();
+                currentChapter += 1;
+                PrefsUtil.writeChapterToPrefs(activity, currentChapter);
+                currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
                 resetStoryGlobals();
                 readStory();
+                iterateWordChunksRX();
             }
         });
 
@@ -279,10 +361,12 @@ public class MainActivity extends AppCompatActivity {
         lowerChapterButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 currentChapter -= 1;
+                PrefsUtil.writeChapterToPrefs(activity, currentChapter);
                 currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
                 disposableReader.dispose();
                 resetStoryGlobals();
                 readStory();
+                iterateWordChunksRX();
             }
         });
 
@@ -357,6 +441,7 @@ public class MainActivity extends AppCompatActivity {
         WPM_view.setText(String.valueOf(WPM));
 
     }
+
 
     public void setStoryContent(StringBuilder fullText) {
         fullStoryView.setText(fullText);
