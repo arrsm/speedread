@@ -3,10 +3,12 @@ package com.example.oceo.speedread;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
 import android.support.v4.content.ContextCompat;
@@ -59,6 +61,9 @@ import com.example.oceo.speedread.PrefsUtil;
 // delay on sentence end
 // take some time to think about when exactly globals need to be reset and if they need to be global at all
 // play with delimeter settings
+// will have to make this a fragment and add an additional fragment representing a book library
+// prefs needs to associate chapter / page  progress with books
+// prefs to store list of recently used books
 
 public class MainActivity extends AppCompatActivity {
 
@@ -88,6 +93,11 @@ public class MainActivity extends AppCompatActivity {
     private Button pauseButton;
     private ArrayList<StringBuilder> displayStrs; // crutch to display bolded words. would like to change
 
+    private Button fileChooseButton;
+    private Uri fileUri;
+    private String filePath;
+    Book book;
+
     Disposable disposableReader;
 
     //long held incrementers
@@ -98,6 +108,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         activity = this;
+        Book book = null;
         setContentView(R.layout.activity_main);
 
 
@@ -105,8 +116,19 @@ public class MainActivity extends AppCompatActivity {
 
         setDefaultValues();
         setupWPMControls();
-        setupChapterControls();
+        setupChapterControls(book);
         pauseButton = findViewById(R.id.pause_button);
+        fileChooseButton = findViewById(R.id.choose_file_button);
+        fileChooseButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent chooseFile = new Intent(Intent.ACTION_GET_CONTENT);
+                chooseFile.setType("*/*");
+                chooseFile = Intent.createChooser(chooseFile, "Choose a file");
+                startActivityForResult(chooseFile, 1);
+            }
+        });
+
 
         pauseButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -139,19 +161,58 @@ public class MainActivity extends AppCompatActivity {
         currentWordView = findViewById(R.id.current_word);
         fullStoryView = findViewById(R.id.file_test);
 
-        readStory();
-        iterateWordChunksRX();
+        if (book != null) {
+            readStory(book);
+            iterateWordChunksRX();
+        }
+    }
 
+    @Override
+
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case 1:
+                if (resultCode == -1) {
+                    fileUri = data.getData();
+                    filePath = fileUri.getPath();
+                }
+                break;
+        }
+        filePath = "/" + filePath.substring(filePath.indexOf(':') + 1, filePath.length());
+        chooseFile(filePath);
 
     }
+
+    public void chooseFile(String fName) {
+        Log.d("file open", fName);
+//        Log.d("i used before", Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString());
+//        File file = new File("/storage/emulated/0/Download/Malazan 10 - The Crippled God - Erikson_ Steven.epub");
+        fName = "/storage/emulated/0/" + fName;
+        fName = fName.replaceAll("//", "/");
+        File file = new File(fName);
+        Book book = null;
+
+        try {
+            InputStream epubInputStream = new FileInputStream(file.toString());
+            Log.d("what is it", file.toString());
+            book = (new EpubReader()).readEpub(epubInputStream);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        this.book = book; // think about how to better structure this
+
+        readStory(book);
+        iterateWordChunksRX();
+    }
+
 
     public void resumeStory() {
         iterateWordChunksRX();
     }
 
-    public void readStory() {
+    public void readStory(Book unused) {
         resetStoryGlobals();
-        fullText = new StringBuilder(readSampleChapter(currentChapter));
+        fullText = new StringBuilder(readSampleChapter(book, currentChapter));
 //        setStoryContent(fullText);
 
         // TODO store max size in prefs so we dont have to calculate each open
@@ -273,7 +334,7 @@ public class MainActivity extends AppCompatActivity {
         fixedTimer = new Timer();
     }
 
-    public void setupChapterControls() {
+    public void setupChapterControls(Book book) {
 
         raiseChapterButton = findViewById(R.id.raise_chpt_button);
         lowerChapterButton = findViewById(R.id.lower_chpt_btn);
@@ -282,12 +343,14 @@ public class MainActivity extends AppCompatActivity {
 
         raiseChapterButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                disposableReader.dispose();
                 currentChapter += 1;
+                if (!disposableReader.isDisposed()) {
+                    disposableReader.dispose();
+                }
                 PrefsUtil.writeChapterToPrefs(activity, currentChapter);
                 currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
                 resetStoryGlobals();
-                readStory();
+                readStory(book);
                 iterateWordChunksRX();
             }
         });
@@ -298,9 +361,11 @@ public class MainActivity extends AppCompatActivity {
                 currentChapter -= 1;
                 PrefsUtil.writeChapterToPrefs(activity, currentChapter);
                 currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
-                disposableReader.dispose();
+                if (!disposableReader.isDisposed()) {
+                    disposableReader.dispose();
+                }
                 resetStoryGlobals();
-                readStory();
+                readStory(book);
                 iterateWordChunksRX();
             }
         });
@@ -402,30 +467,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    public String readSampleChapter(int chapterNumber) {
+    public String readSampleChapter(Book book, int chapterNumber) {
         // TODO test if invalid chapter passed in
         String chapterContents;
-        Book book = getBook();
         Spine spine = book.getSpine();
         chapterContents = getChapter(spine, chapterNumber);
         return chapterContents;
     }
 
-    public Book getBook() {
-        // TODO allow file system selection
-        File sdcard = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        String fName = "Malazan 10 - The Crippled God - Erikson_ Steven.epub";
-        File file = new File(sdcard, fName);
-        Book book = null;
-        // TODO check permissions here
-        try {
-            InputStream epubInputStream = new FileInputStream(file.toString());
-            book = (new EpubReader()).readEpub(epubInputStream);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return book;
-    }
 
     private String getChapter(Spine spine, int spineLocation) {
         if (spineLocation > spine.size()) {
@@ -443,16 +492,14 @@ public class MainActivity extends AppCompatActivity {
             while ((line = reader.readLine()) != null) {
                 if (!line.contains("<title>")) {
                     Spanned HTMLText = Html.fromHtml(formatLine(line));
-                    if (HTMLText.length() > 0) {
-                        string.append(HTMLText);
-                        string.append(" ");
-                    }
+                    string.append(HTMLText);
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return string.toString();
+        // TODO check if this is faster than the if statement to add a space after each insert
+        return string.toString().replace(".", ". ");
     }
 
 
