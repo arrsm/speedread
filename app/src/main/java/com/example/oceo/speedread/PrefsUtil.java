@@ -37,4 +37,17 @@ public class PrefsUtil {
         return chapter;
     }
 
+    public static void writeRecentlyUsedBookToPrefs(Activity activity, String bookName) {
+        SharedPreferences sharedPref = activity.getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString("recent_books", bookName);
+        editor.apply();
+    }
+
+    public static void readRecentlyUsedBookToPrefs(Activity activity) {
+        SharedPreferences sharedPref = activity.getPreferences(Context.MODE_PRIVATE);
+        sharedPref.getString("recent_books", "");
+    }
+
+
 }
