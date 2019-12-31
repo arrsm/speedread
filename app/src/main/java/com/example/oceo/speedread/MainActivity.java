@@ -11,6 +11,7 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -104,6 +105,9 @@ public class MainActivity extends AppCompatActivity {
     //long held incrementers
     Timer fixedTimer = new Timer();
 
+    public void setBook(Book book) {
+        this.book = book;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -123,10 +127,13 @@ public class MainActivity extends AppCompatActivity {
         fileChooseButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent chooseFile = new Intent(Intent.ACTION_GET_CONTENT);
-                chooseFile.setType("*/*");
-                chooseFile = Intent.createChooser(chooseFile, "Choose a file");
-                startActivityForResult(chooseFile, 1);
+                if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+//                    FileSelector.launchFileChooser(activity);
+                    launchFileChooser();
+                } else {
+                    Log.d("Open file", "No File Permissions");
+                    ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 3);
+                }
             }
         });
 
@@ -168,8 +175,32 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @Override
+    public void launchFileChooser() {
+        Intent chooseFile = new Intent(Intent.ACTION_GET_CONTENT);
+        chooseFile.setType("*/*");
+        chooseFile = Intent.createChooser(chooseFile, "Choose a file");
+        startActivityForResult(chooseFile, 1);
+    }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        Log.d("permissionsReqResult", String.valueOf(requestCode));
+        // 3 for external storage read
+        switch (requestCode) {
+            case 3:
+                Log.d(TAG, "Read External storage Permission");
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Log.v(TAG, "Permission: " + permissions[0] + "was " + grantResults[0]);
+                    launchFileChooser();
+                } else {
+                    Log.d("Permission", "File Perm not granted");
+                }
+                break;
+        }
+    }
+
+    @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
             case 1:
@@ -186,11 +217,11 @@ public class MainActivity extends AppCompatActivity {
 
     public void chooseFile(String fName) {
         Log.d("file open", fName);
-//        Log.d("i used before", Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString());
+        Log.d("i used before", Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString());
 //        File file = new File("/storage/emulated/0/Download/Malazan 10 - The Crippled God - Erikson_ Steven.epub");
         fName = "/storage/emulated/0/" + fName;
         fName = fName.replaceAll("//", "/");
-        // TODO more robust file openings. sometimes the path is different
+//         TODO more robust file openings. sometimes the path is different
         File file = new File(fName);
         Book book = null;
 
@@ -205,6 +236,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
         this.book = book; // think about how to better structure this
 
         if (this.book != null) {
