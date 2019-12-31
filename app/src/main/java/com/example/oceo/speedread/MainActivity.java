@@ -22,6 +22,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -116,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
 
         setDefaultValues();
         setupWPMControls();
-        setupChapterControls(book);
+        setupChapterControls();
         pauseButton = findViewById(R.id.pause_button);
         fileChooseButton = findViewById(R.id.choose_file_button);
         fileChooseButton.setOnClickListener(new View.OnClickListener() {
@@ -189,20 +190,27 @@ public class MainActivity extends AppCompatActivity {
 //        File file = new File("/storage/emulated/0/Download/Malazan 10 - The Crippled God - Erikson_ Steven.epub");
         fName = "/storage/emulated/0/" + fName;
         fName = fName.replaceAll("//", "/");
+        // TODO more robust file openings. sometimes the path is different
         File file = new File(fName);
         Book book = null;
 
         try {
             InputStream epubInputStream = new FileInputStream(file.toString());
             Log.d("what is it", file.toString());
-            book = (new EpubReader()).readEpub(epubInputStream);
+            if (file.toString().contains(".epub")) {
+                book = (new EpubReader()).readEpub(epubInputStream);
+            } else {
+                Toast.makeText(this, "Not epub", Toast.LENGTH_LONG).show();
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
         this.book = book; // think about how to better structure this
 
-        readStory(book);
-        iterateWordChunksRX();
+        if (this.book != null) {
+            readStory(book);
+            iterateWordChunksRX();
+        }
     }
 
 
@@ -334,7 +342,7 @@ public class MainActivity extends AppCompatActivity {
         fixedTimer = new Timer();
     }
 
-    public void setupChapterControls(Book book) {
+    public void setupChapterControls() {
 
         raiseChapterButton = findViewById(R.id.raise_chpt_button);
         lowerChapterButton = findViewById(R.id.lower_chpt_btn);
@@ -343,30 +351,38 @@ public class MainActivity extends AppCompatActivity {
 
         raiseChapterButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+//                Log.d("the book:", String.valueOf(book));
                 currentChapter += 1;
-                if (!disposableReader.isDisposed()) {
-                    disposableReader.dispose();
+                if (book != null) {
+                    if (disposableReader != null && !disposableReader.isDisposed()) {
+                        disposableReader.dispose();
+                    }
+                    PrefsUtil.writeChapterToPrefs(activity, currentChapter);
+                    currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
+                    resetStoryGlobals();
+                    readStory(book);
+                    iterateWordChunksRX();
                 }
-                PrefsUtil.writeChapterToPrefs(activity, currentChapter);
-                currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
-                resetStoryGlobals();
-                readStory(book);
-                iterateWordChunksRX();
             }
         });
 
 
         lowerChapterButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                currentChapter -= 1;
-                PrefsUtil.writeChapterToPrefs(activity, currentChapter);
-                currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
-                if (!disposableReader.isDisposed()) {
-                    disposableReader.dispose();
+
+                if (currentChapter >= 0) {
+                    currentChapter -= 1;
+                    if (book != null) {
+                        PrefsUtil.writeChapterToPrefs(activity, currentChapter);
+                        currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
+                        if (disposableReader != null && !disposableReader.isDisposed()) {
+                            disposableReader.dispose();
+                        }
+                        resetStoryGlobals();
+                        readStory(book);
+                        iterateWordChunksRX();
+                    }
                 }
-                resetStoryGlobals();
-                readStory(book);
-                iterateWordChunksRX();
             }
         });
 
@@ -466,13 +482,26 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    public void getTotalChapters() {
+
+    }
+
+    public void displayTOC() {
+
+    }
 
     public String readSampleChapter(Book book, int chapterNumber) {
         // TODO test if invalid chapter passed in
-        String chapterContents;
-        Spine spine = book.getSpine();
-        chapterContents = getChapter(spine, chapterNumber);
+        String chapterContents = null;
+        if (book != null) {
+            Spine spine = book.getSpine();
+            chapterContents = getChapter(spine, chapterNumber);
+        } else {
+            Log.d("readSampleChpt", "book is null");
+        }
+
         return chapterContents;
+
     }
 
 
