@@ -21,7 +21,10 @@ import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -33,6 +36,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.StringTokenizer;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -43,12 +47,17 @@ import io.reactivex.disposables.Disposable;
 import nl.siegmann.epublib.domain.Book;
 import nl.siegmann.epublib.domain.Resource;
 import nl.siegmann.epublib.domain.Spine;
+import nl.siegmann.epublib.domain.TOCReference;
 import nl.siegmann.epublib.epub.EpubReader;
 
 
 import io.reactivex.Observable;
 
 import com.example.oceo.speedread.PrefsUtil;
+import com.example.oceo.speedread.EPubLibUtil;
+
+import static com.example.oceo.speedread.EPubLibUtil.exploreTOC;
+import static com.example.oceo.speedread.EPubLibUtil.getTOCResourceIds;
 
 //TODO check file permissions
 // file selection tool
@@ -93,11 +102,14 @@ public class MainActivity extends AppCompatActivity {
     private Button lowerChapterButton;
     private TextView WPM_view;
     private Button pauseButton;
+    private Spinner dropdown;
     private ArrayList<StringBuilder> displayStrs; // crutch to display bolded words. would like to change
 
     private Button fileChooseButton;
     private Uri fileUri;
     private String filePath;
+    private ArrayList<String> tocResourceIds;
+
     Book book;
 
     Disposable disposableReader;
@@ -105,15 +117,11 @@ public class MainActivity extends AppCompatActivity {
     //long held incrementers
     Timer fixedTimer = new Timer();
 
-    public void setBook(Book book) {
-        this.book = book;
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         activity = this;
-        Book book = null;
         setContentView(R.layout.activity_main);
 
 
@@ -127,12 +135,11 @@ public class MainActivity extends AppCompatActivity {
         fileChooseButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-//                    FileSelector.launchFileChooser(activity);
-                    launchFileChooser();
+                if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                    FileSelector.launchFileChooser(activity);
                 } else {
                     Log.d("Open file", "No File Permissions");
-                    ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 3);
+                    FileSelector.requestReadPermission(activity);
                 }
             }
         });
@@ -169,37 +176,64 @@ public class MainActivity extends AppCompatActivity {
         currentWordView = findViewById(R.id.current_word);
         fullStoryView = findViewById(R.id.file_test);
 
-        if (book != null) {
-            readStory(book);
-            iterateWordChunksRX();
-        }
+
+        this.book = EPubLibUtil.getBook("storage/emulated/0/Books/MoonReader/Brandon Sanderson - Oathbringer_ Book Three of the Stormlight Archive-Tor Books (2017).epub");
+        this.tocResourceIds = getTOCResourceIDs();
+        displayTOC();
+
+//        ArrayList<String> tocIDs = new ArrayList<String>();
+//        tocIDs = EPubLibUtil.getTOCResourceIds(exploreTOC(this.book), 0, toc);
+//        currentChapter = EPubLibUtil.mapTOCToSpine(this.book, toc.get(14));
+//        readStory(book);
+//        iterateWordChunksRX();
+
     }
 
-    public void launchFileChooser() {
-        Intent chooseFile = new Intent(Intent.ACTION_GET_CONTENT);
-        chooseFile.setType("*/*");
-        chooseFile = Intent.createChooser(chooseFile, "Choose a file");
-        startActivityForResult(chooseFile, 1);
-    }
+    public void displayTOC() {
+        List<TOCReference> tocRefs = EPubLibUtil.exploreTOC(this.book);
+        ArrayList<String> TOCTitles = new ArrayList<String>();
+        TOCTitles = EPubLibUtil.getTOCTitles(tocRefs, 0, TOCTitles);
+        dropdown = findViewById(R.id.spinner1);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, TOCTitles);
+        dropdown.setAdapter(adapter);
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        Log.d("permissionsReqResult", String.valueOf(requestCode));
-        // 3 for external storage read
-        switch (requestCode) {
-            case 3:
-                Log.d(TAG, "Read External storage Permission");
-                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Log.v(TAG, "Permission: " + permissions[0] + "was " + grantResults[0]);
-                    launchFileChooser();
-                } else {
-                    Log.d("Permission", "File Perm not granted");
+        dropdown.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                Log.d("spinner test", String.valueOf(position));
+                String selectedItem = tocResourceIds.get(position);
+                currentChapter = EPubLibUtil.mapTOCToSpine(book, selectedItem);
+                if (disposableReader != null && !disposableReader.isDisposed()) {
+                    disposableReader.dispose();
                 }
-                break;
-        }
+                PrefsUtil.writeChapterToPrefs(activity, currentChapter);
+                currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
+                resetStoryGlobals();
+                readStory(book);
+                iterateWordChunksRX();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
     }
 
+    public ArrayList<String> getTOCResourceIDs() {
+        ArrayList<String> tocIDs = new ArrayList<String>();
+        tocIDs = EPubLibUtil.getTOCResourceIds(exploreTOC(this.book), 0, tocIDs);
+        return tocIDs;
+    }
+
+
+    /*
+     result of selecting a file from OP6 file explorer
+         would have liked this to be in the FileSelector class but seems the result should be here
+         otherwise no access to the filepath var as it can not be returned. Im sure there's a better
+         way tod o this
+     */
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
@@ -210,34 +244,27 @@ public class MainActivity extends AppCompatActivity {
                 }
                 break;
         }
-        filePath = "/" + filePath.substring(filePath.indexOf(':') + 1, filePath.length());
-        chooseFile(filePath);
-
+//        filePath = "/" + filePath.substring(filePath.indexOf(':') + 1, filePath.length());
+        filePath = modifyFilePath(filePath);
+        readFile(filePath);
     }
 
-    public void chooseFile(String fName) {
-        Log.d("file open", fName);
-        Log.d("i used before", Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).toString());
-//        File file = new File("/storage/emulated/0/Download/Malazan 10 - The Crippled God - Erikson_ Steven.epub");
-        fName = "/storage/emulated/0/" + fName;
-        fName = fName.replaceAll("//", "/");
+    public String modifyFilePath(String filePath) {
 //         TODO more robust file openings. sometimes the path is different
-        File file = new File(fName);
-        Book book = null;
+        // TODO can go into utils
+        // get this to work for multiple file open apps
+        // right now this is what works for my current phone, a OP6
+        filePath = "/" + filePath.substring(filePath.indexOf(':') + 1, filePath.length());
+        filePath = "/storage/emulated/0/" + filePath;
+        filePath = filePath.replaceAll("//", "/");
+        return filePath;
+    }
 
-        try {
-            InputStream epubInputStream = new FileInputStream(file.toString());
-            Log.d("what is it", file.toString());
-            if (file.toString().contains(".epub")) {
-                book = (new EpubReader()).readEpub(epubInputStream);
-            } else {
-                Toast.makeText(this, "Not epub", Toast.LENGTH_LONG).show();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
-        this.book = book; // think about how to better structure this
+    public void readFile(String fName) {
+        Log.d("file open", fName);
+
+        this.book = EPubLibUtil.getBook(fName); // think about how to better structure this
 
         if (this.book != null) {
             readStory(book);
@@ -518,9 +545,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void displayTOC() {
-
-    }
 
     public String readSampleChapter(Book book, int chapterNumber) {
         // TODO test if invalid chapter passed in
@@ -551,16 +575,27 @@ public class MainActivity extends AppCompatActivity {
             is = res.getInputStream();
             reader = new BufferedReader(new InputStreamReader(is));
             while ((line = reader.readLine()) != null) {
-                if (!line.contains("<title>")) {
-                    Spanned HTMLText = Html.fromHtml(formatLine(line));
-                    string.append(HTMLText);
+                Spanned span = lineParser(line);
+                if (span != null) {
+                    string.append(span);
                 }
+
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
         // TODO check if this is faster than the if statement to add a space after each insert
         return string.toString().replace(".", ". ");
+    }
+
+    private Spanned lineParser(String line) {
+
+        if (line.contains("<title>")) {
+            return null;
+        }
+        String formattedLine = formatLine(line);
+        Spanned HTMLText = Html.fromHtml(formattedLine);
+        return HTMLText;
     }
 
 
@@ -579,6 +614,10 @@ public class MainActivity extends AppCompatActivity {
             line = line.substring(line.length());
         }
         return line;
+    }
+
+    public void setBook(Book book) {
+        this.book = book;
     }
 
 }
