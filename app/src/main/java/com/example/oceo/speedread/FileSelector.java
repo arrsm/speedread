@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.widget.Toast;
@@ -16,13 +17,14 @@ public class FileSelector extends AppCompatActivity {
     private String TAG = "FileSelector";
     private final int EXTERNAL_STORAGE_READ_PERMISSION_REQ = 3;
     Activity activity; // set when launchFile initially called. maybe a better way?
+    Fragment frag;
 
 
-    public static void launchFileChooser(Activity activity) {
+    public static void launchFileChooser(Fragment frag) {
         Intent chooseFile = new Intent(Intent.ACTION_GET_CONTENT);
         chooseFile.setType("*/*");
         chooseFile = Intent.createChooser(chooseFile, "Choose a file");
-        activity.startActivityForResult(chooseFile, 1);
+        frag.startActivityForResult(chooseFile, 1);
     }
 
     public static void requestReadPermission(Activity activity) {
@@ -39,7 +41,7 @@ public class FileSelector extends AppCompatActivity {
                 Log.d(TAG, "Read External storage Permission");
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     Log.v(TAG, "Permission: " + permissions[0] + "was " + grantResults[0]);
-                    launchFileChooser(activity);
+                    launchFileChooser(frag);
                 } else {
                     Log.d("Permission", "File Perm not granted");
                 }
