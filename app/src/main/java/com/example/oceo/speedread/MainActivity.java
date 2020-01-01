@@ -13,6 +13,8 @@ import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -60,283 +62,36 @@ import com.example.oceo.speedread.EPubLibUtil;
 import static com.example.oceo.speedread.EPubLibUtil.exploreTOC;
 import static com.example.oceo.speedread.EPubLibUtil.getTOCResourceIds;
 
-//TODO check file permissions
-// file selection tool
-// write to prefs when app closed or minimized
-// can i count the number of words in file faster? currently converting StringBuilder to String and tokenizing
-// min values for WPM (setting to 0 for example will cause a never ending postdelayed call)
-// show values changing WHILE button held https://stackoverflow.com/questions/12071090/triggering-event-continuously-when-button-is-pressed-down-in-android
-// also prob cant touch both at the same time
-// indication for when reading is happening
-// scroll up or down to get to previous lines. eg if iw ant to reread a paragraph
-// keep track of start and end indexes to have better resume experience
-// delay on sentence end
-// take some time to think about when exactly globals need to be reset and if they need to be global at all
-// play with delimeter settings
-// will have to make this a fragment and add an additional fragment representing a book library
-// prefs needs to associate chapter / page  progress with books
-// prefs to store list of recently used books
-// reset chapter if keeps failing
-// seek to next sentence
-// seek to next paragraph
 
-public class MainActivity extends AppCompatActivity {
-
+public class MainActivity extends FragmentActivity implements BookSelectionFragment.SendChosenFile {
     String TAG = "MainActivity";
     Activity activity;
-
-    private long WPM;
-    private long WPM_MS;
-    private int currSentenceStart;
-    private int currSentenceEnd;
-    private int currentWordIdx; // current word being iterated over
-    private int maxWordIdx; // last word in chapter
-    private int chunkIdx; // word being iterated over in chunk
     private int currentChapter;
-    private int chunkSize; // number of words displayed as focus
-    protected StringBuilder fullText; // holds full story in memory
-    private ArrayList<String> story; // fullText converted to arraylist
-    private TextView fullStoryView;
-    private TextView currentWordView;
-    private TextView currentChunkView;
-    private Button raiseWPMButton;
-    private Button lowerWPMButton;
-    private TextView currentChapterview;
-    private Button raiseChapterButton;
-    private Button lowerChapterButton;
-    private TextView WPM_view;
-    private Spinner dropdown;
-    private ArrayList<StringBuilder> displayStrs; // crutch to display bolded words. would like to change
-
-    private Button fileChooseButton;
-    private Uri fileUri;
-    private String filePath;
-    private ArrayList<String> tocResourceIds;
-
-    Book book;
-
+    private int currentWordIdx;
     Disposable disposableReader;
-
-    //long held incrementers
-    Timer fixedTimer = new Timer();
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         activity = this;
         setContentView(R.layout.activity_main);
-
-
-        currentChapter = PrefsUtil.readChapterFromPrefs(this);
-        if (currentChapter <= 0) {
-            Log.d(TAG, "chapter is invalid setting to 0");
-            currentChapter = 0;
+        if (savedInstanceState == null) {
+//            addBookReaderFragment();
+            addBookSelectionFragment();
         }
-
-        setDefaultValues();
-        setupWPMControls();
-        setupChapterControls();
-        fileChooseButton = findViewById(R.id.choose_file_button);
-        fileChooseButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-                    FileSelector.launchFileChooser(activity);
-                } else {
-                    Log.d("Open file", "No File Permissions");
-                    FileSelector.requestReadPermission(activity);
-                }
-            }
-        });
-
-
-        currentChunkView = findViewById(R.id.current_chunk);
-        currentChunkView.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (!disposableReader.isDisposed()) {
-                    disposableReader.dispose();
-                } else {
-                    iterateWordChunksRX();
-                }
-
-            }
-        });
-        currentWordView = findViewById(R.id.current_word);
-        fullStoryView = findViewById(R.id.file_test);
-
-
-        this.book = EPubLibUtil.getBook("storage/emulated/0/Books/MoonReader/Brandon Sanderson - Oathbringer_ Book Three of the Stormlight Archive-Tor Books (2017).epub");
-        this.tocResourceIds = getTOCResourceIDs();
-        displayTOC();
-
-
-    }
-
-    public void displayTOC() {
-        List<TOCReference> tocRefs = EPubLibUtil.exploreTOC(this.book);
-        ArrayList<String> TOCTitles = new ArrayList<String>();
-        TOCTitles = EPubLibUtil.getTOCTitles(tocRefs, 0, TOCTitles);
-        dropdown = findViewById(R.id.spinner1);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, TOCTitles);
-        dropdown.setAdapter(adapter);
-        dropdown.setSelection(currentChapter);
-
-        dropdown.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                // TODO something weird with indexign is going on here
-                // I thikn it has to do with the fact that its possible for spine items to not be linked in the ToC
-                // choosing chpt 4. Oaths for example takes to 14 but on reopen goes to 15
-                String selectedItem = tocResourceIds.get(position);
-                currentChapter = EPubLibUtil.mapTOCToSpine(book, selectedItem);
-                if (disposableReader != null && !disposableReader.isDisposed()) {
-                    disposableReader.dispose();
-                }
-                PrefsUtil.writeChapterToPrefs(activity, currentChapter);
-                currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
-                resetStoryGlobals();
-                readStory();
-                iterateWordChunksRX();
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
-    }
-
-    public ArrayList<String> getTOCResourceIDs() {
-        ArrayList<String> tocIDs = new ArrayList<String>();
-        tocIDs = EPubLibUtil.getTOCResourceIds(exploreTOC(this.book), 0, tocIDs);
-        return tocIDs;
-    }
-
-
-    /*
-     result of selecting a file from OP6 file explorer
-         would have liked this to be in the FileSelector class but seems the result should be here
-         otherwise no access to the filepath var as it can not be returned. Im sure there's a better
-         way tod o this
-     */
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        switch (requestCode) {
-            case 1:
-                if (resultCode == -1) {
-                    fileUri = data.getData();
-                    filePath = fileUri.getPath();
-                }
-                break;
-        }
-//        filePath = "/" + filePath.substring(filePath.indexOf(':') + 1, filePath.length());
-        filePath = modifyFilePath(filePath);
-        readFile(filePath);
-    }
-
-    public String modifyFilePath(String filePath) {
-//         TODO more robust file openings. sometimes the path is different
-        // TODO can go into utils
-        // get this to work for multiple file open apps
-        // right now this is what works for my current phone, a OP6
-        filePath = "/" + filePath.substring(filePath.indexOf(':') + 1, filePath.length());
-        filePath = "/storage/emulated/0/" + filePath;
-        filePath = filePath.replaceAll("//", "/");
-        return filePath;
-    }
-
-    public void readFile(String fName) {
-        Log.d("file open", fName);
-
-        this.book = EPubLibUtil.getBook(fName); // think about how to better structure this
-
-        if (this.book != null) {
-            readStory();
-            iterateWordChunksRX();
-        }
-    }
-
-
-    public void readStory() {
-        resetStoryGlobals();
-        String chapter = readSampleChapter(book, currentChapter);
-        fullText = new StringBuilder(chapter);
-//        setStoryContent(fullText);
-
-        // TODO store max size in prefs so we dont have to calculate each open
-        StringTokenizer tokens = countWordsUsingStringTokenizer(fullText.toString());
-        if (tokens != null) {
-            maxWordIdx = tokens.countTokens();
-            story = tokensToArrayList(tokens);
-        }
-    }
-
-    public void resetStoryGlobals() {
-        currSentenceStart = 0;
-        currSentenceEnd = 0;
-        currentWordIdx = 0;
-        chunkIdx = 0;
-    }
-
-    public int getNextSentences(ArrayList<String> tokens, int numSentences) {
-        // TODO also keep track of where the sentences end for formatting
-        int tempChunkIdx = currentWordIdx;
-        int foundSentences = 0;
-
-
-        while (foundSentences < numSentences) {
-            while (tempChunkIdx < maxWordIdx &&
-                    (!tokens.get(tempChunkIdx).contains(".")
-                            || tokens.get(tempChunkIdx).contains("?")
-                            || tokens.get(tempChunkIdx).contains("!"))) {
-                tempChunkIdx++;
-            }
-            tempChunkIdx += 1;
-            foundSentences += 1;
-        }
-        return tempChunkIdx;
-    }
-
-    public ArrayList<StringBuilder> buildBoldSentences(int startIdx, int endIdx) {
-        // TODO wish there was a better way to do this rather than building and holding o(n^2)
-        //  strings in the number of words
-
-        if (maxWordIdx < endIdx) {
-            endIdx = maxWordIdx;
-        }
-
-        ArrayList<StringBuilder> displayStrs = new ArrayList<StringBuilder>();
-
-        for (int targetWord = startIdx; targetWord < endIdx; targetWord++) {
-            StringBuilder formattedDisplayStr = new StringBuilder();
-
-            for (int i = startIdx; i < endIdx; i++) {
-                if (targetWord == i) {
-                    formattedDisplayStr.append("<b>" + story.get(i) + "</b> ");
-                } else {
-                    formattedDisplayStr.append(story.get(i) + " ");
-                }
-            }
-            displayStrs.add(formattedDisplayStr);
-        }
-
-        return displayStrs;
     }
 
 
     @Override
     protected void onStart() {
-//        Log.d("Lifecycle", "onStart");
+//        Log.d(TAG, "onStart");
         super.onStart();  // Always call the superclass method first
 
     }
 
-
     @Override
     protected void onRestart() {
-//        Log.d("Lifecycle", "onSRestart");
+//        Log.d(TAG, "onSRestart");
         super.onRestart();  // Always call the superclass method first
 
         // Activity being restarted from stopped state
@@ -344,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onPause() {
-//        Log.d("Lifecycle", "onPause");
+//        Log.d(TAG, "onPause");
         if (disposableReader != null && !disposableReader.isDisposed()) {
             disposableReader.dispose();
         }
@@ -355,281 +110,53 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onStop() {
-//        Log.d("Lifecycle", "onStop");
+//        Log.d(TAG, "onStop");
         super.onStop();  // Always call the superclass method first
     }
 
     @Override
     public void onResume() {
-        Log.d("Lifecycle", "onResume");
+        Log.d(TAG, "onResume");
         super.onResume();  // Always call the superclass method first
-        if (book != null) {
-            currentWordIdx = PrefsUtil.readCurrWordIdxFromPrefs(activity);
-            iterateWordChunksRX();
-        }
+//        if (book != null) {
+//            currentWordIdx = PrefsUtil.readCurrWordIdxFromPrefs(activity);
+//            iterateWordChunksRX();
+//        }
     }
 
 
-    public void setDefaultValues() {
-        WPM = 175;
-        WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
-        chunkSize = 30;
-        resetStoryGlobals();
+    private void addBookReaderFragment() {
+        BookReaderFragment fragment = new BookReaderFragment();
+        FragmentTransaction transaction = getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.container, fragment)
+                .addToBackStack("tag");
+        transaction.commit();
     }
 
-    public void iterateWordChunksRX() {
-        int chunkStartIdx = currSentenceStart;
-        int chunkMaxIdx = getNextSentences(story, 1);
-        displayStrs = buildBoldSentences(chunkStartIdx, chunkMaxIdx);
-
-        Observable rangeObs = Observable.range(currentWordIdx, chunkMaxIdx - currentWordIdx)
-                .concatMap(i -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS))
-                .observeOn(AndroidSchedulers.mainThread());
-
-        disposableReader = rangeObs.subscribe(wordIdx -> {
-//                    Log.d("The OBS", String.valueOf(wordIdx) + " / " + String.valueOf(chunkMaxIdx));
-                    if (chunkIdx < displayStrs.size()) { // check we dont go out of bounds
-                        currentChunkView.setText(Html.fromHtml(displayStrs.get(chunkIdx).toString()));
-                        currentWordView.setText(story.get(currentWordIdx));
-                        chunkIdx++;
-                        currentWordIdx++;
-                    } else {
-                        // can reach here if we pause then resume
-                        Log.d("The OBS", "Is Out of Bounds");
-                    }
-
-                },
-                e -> {
-
-                },
-                () -> {
-//                        Log.d("obs", "k do the next chunk");
-                    if (currentWordIdx < maxWordIdx) {
-                        chunkIdx = 0;
-                        currSentenceStart = currentWordIdx;
-                        // reset position and scroll through next chunk
-                        iterateWordChunksRX();
-                    } else {
-                        Log.d("Observable", "No more chunks");
-                    }
-                });
+    private void addBookSelectionFragment() {
+        BookSelectionFragment fragment = new BookSelectionFragment();
+        FragmentTransaction transaction = getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.container, fragment)
+                .addToBackStack("tag");
+        transaction.commit();
     }
 
-    void initTimer() {
-        /*
-            timer currently used for: long-pressing wpm inc/dec
-         */
-        fixedTimer = new Timer();
-    }
+    @Override
+    public void sendFilePath(String fPath) {
+        Bundle bundle = new Bundle();
+        bundle.putString("file_path", fPath);
+        BookReaderFragment br = new BookReaderFragment();
+        br.setArguments(bundle);
 
-    public void setupChapterControls() {
-
-        raiseChapterButton = findViewById(R.id.raise_chpt_button);
-        lowerChapterButton = findViewById(R.id.lower_chpt_btn);
-        currentChapterview = findViewById(R.id.current_chapter);
-
-
-        raiseChapterButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                currentChapter += 1;
-                if (book != null) {
-                    if (disposableReader != null && !disposableReader.isDisposed()) {
-                        disposableReader.dispose();
-                    }
-                    PrefsUtil.writeChapterToPrefs(activity, currentChapter);
-                    currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
-                    resetStoryGlobals();
-                    readStory();
-                    iterateWordChunksRX();
-                }
-            }
-        });
-
-
-        lowerChapterButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-
-                if (currentChapter >= 0) {
-                    currentChapter -= 1;
-                    if (book != null) {
-                        PrefsUtil.writeChapterToPrefs(activity, currentChapter);
-                        currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
-                        if (disposableReader != null && !disposableReader.isDisposed()) {
-                            disposableReader.dispose();
-                        }
-                        resetStoryGlobals();
-                        readStory();
-                        iterateWordChunksRX();
-                    }
-                }
-            }
-        });
-
-        currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
+        FragmentTransaction transaction = getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.container, br)
+                .addToBackStack("tag");
+        transaction.commit();
 
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    public void setupWPMControls() {
-        raiseWPMButton = findViewById(R.id.raise_wpm_button);
-        lowerWPMButton = findViewById(R.id.lower_wpm_button);
-        WPM_view = findViewById(R.id.current_wpm_view);
-
-
-        raiseWPMButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                WPM += 1;
-                WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
-                WPM_view.setText(String.valueOf(WPM));
-            }
-        });
-
-
-        raiseWPMButton.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    fixedTimer.scheduleAtFixedRate(new TimerTask() {
-                        @Override
-                        public void run() {
-                            WPM += 10;
-                        }
-                    }, 1000, 100);
-                } else if (event.getAction() == MotionEvent.ACTION_UP) {
-                    fixedTimer.cancel();
-                    initTimer();
-                    WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
-                }
-                return false;
-            }
-        });
-
-
-        lowerWPMButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                WPM -= 1;
-                WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
-                WPM_view.setText(String.valueOf(WPM));
-            }
-        });
-
-        lowerWPMButton.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    fixedTimer.scheduleAtFixedRate(new TimerTask() {
-                        @Override
-                        public void run() {
-                            WPM -= 10;
-                        }
-                    }, 1000, 100);
-                } else if (event.getAction() == MotionEvent.ACTION_UP) {
-                    fixedTimer.cancel();
-                    initTimer();
-                    WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
-                }
-
-                return false;
-            }
-        });
-
-        WPM_view.setText(String.valueOf(WPM));
-
-    }
-
-    public void setStoryContent(StringBuilder fullText) {
-        fullStoryView.setText(fullText);
-        fullStoryView.setMovementMethod(new ScrollingMovementMethod());
-    }
-
-    public static StringTokenizer countWordsUsingStringTokenizer(String words) {
-        if (words == null || words.isEmpty()) {
-            return null;
-        }
-        StringTokenizer tokens = new StringTokenizer(words, " \t\n\r\f", false);
-        return tokens;
-    }
-
-    public static ArrayList<String> tokensToArrayList(StringTokenizer tokens) {
-        // given a story tokenized by words dump them into arraylist
-        ArrayList<String> story = new ArrayList<String>();
-        while (tokens.hasMoreTokens()) {
-            story.add(tokens.nextToken());
-        }
-        return story;
-
-    }
-
-    public String readSampleChapter(Book book, int chapterNumber) {
-        // TODO test if invalid chapter passed in
-        String chapterContents = null;
-        if (book != null) {
-            Spine spine = book.getSpine();
-            chapterContents = getChapter(spine, chapterNumber);
-        } else {
-            Log.d("readSampleChpt", "book is null");
-        }
-
-        return chapterContents;
-
-    }
-
-    private String getChapter(Spine spine, int spineLocation) {
-        if (spineLocation > spine.size()) {
-            return null;
-        }
-        StringBuilder string = new StringBuilder();
-        Resource res;
-        InputStream is;
-        BufferedReader reader;
-        String line;
-        res = spine.getResource(spineLocation);
-        try {
-            is = res.getInputStream();
-            reader = new BufferedReader(new InputStreamReader(is));
-            while ((line = reader.readLine()) != null) {
-                Spanned span = lineParser(line);
-                if (span != null) {
-                    string.append(span);
-                }
-
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        // TODO check if this is faster than the if statement to add a space after each insert
-        return string.toString().replace(".", ". ");
-    }
-
-    private Spanned lineParser(String line) {
-
-        if (line.contains("<title>")) {
-            return null;
-        }
-        String formattedLine = formatLine(line);
-        Spanned HTMLText = Html.fromHtml(formattedLine);
-        return HTMLText;
-    }
-
-    private String formatLine(String line) {
-        /*
-         * belongs to above fn
-         */
-        if (line.contains("http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd")) {
-            line = line.substring(line.indexOf(">") + 1, line.length());
-        }
-
-        // REMOVE STYLES AND COMMENTS IN HTML
-        if ((line.contains("{") && line.contains("}"))
-                || ((line.contains("/*")) && line.contains("*/"))
-                || (line.contains("<!--") && line.contains("-->"))) {
-            line = line.substring(line.length());
-        }
-        return line;
-    }
-
-    public void setBook(Book book) {
-        this.book = book;
-    }
 
 }
