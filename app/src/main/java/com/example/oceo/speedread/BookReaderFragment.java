@@ -40,9 +40,11 @@ import io.reactivex.disposables.Disposable;
 import nl.siegmann.epublib.domain.Book;
 import nl.siegmann.epublib.domain.Resource;
 import nl.siegmann.epublib.domain.Spine;
+import nl.siegmann.epublib.domain.SpineReference;
 import nl.siegmann.epublib.domain.TOCReference;
 
 import static com.example.oceo.speedread.EPubLibUtil.exploreTOC;
+import static com.example.oceo.speedread.EPubLibUtil.mapSpineToTOC;
 
 
 public class BookReaderFragment extends Fragment {
@@ -103,6 +105,8 @@ public class BookReaderFragment extends Fragment {
 
     final String CHAPTER_KEY = "chapter";
     final String WORD_KEY = "page";
+
+    int firstTimeFlag = 0; // should spinner action be called
 
 
     Book book;
@@ -176,25 +180,35 @@ public class BookReaderFragment extends Fragment {
         dropdown = rootView.findViewById(R.id.spinner1);
         ArrayAdapter<String> adapter = new ArrayAdapter<>(activity, android.R.layout.simple_spinner_dropdown_item, TOCTitles);
         dropdown.setAdapter(adapter);
-        dropdown.setSelection(currentChapter);
+
+        // TODO maybe move this bit to the epublib utils
+        List<SpineReference> spineRefs = book.getSpine().getSpineReferences();
+        String currentSpineID = spineRefs.get(currentChapter).getResourceId();
+        int currentToCIdx = mapSpineToTOC(currentSpineID, tocResourceIds); // find out if current chapter is in TOC
+
+        // if not then dont set the ToC there
+        if (currentToCIdx != -1) {
+            dropdown.setSelection(currentToCIdx);
+        }
 
         dropdown.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                // TODO something weird with indexign is going on here
-                // I thikn it has to do with the fact that its possible for spine items to not be linked in the ToC
+                // TODO something weird with indexing is going on here i think i just need a completely different way of doing this
                 // choosing chpt 4. Oaths for example takes to 14 but on reopen goes to 15
                 String selectedItem = tocResourceIds.get(position);
-                currentChapter = EPubLibUtil.mapTOCToSpine(book, selectedItem);
-                if (disposableReader != null && !disposableReader.isDisposed()) {
-                    disposableReader.dispose();
+                if (++firstTimeFlag > 1) { // do not update on launch
+                    currentChapter = EPubLibUtil.mapTOCToSpine(book, selectedItem);
+                    if (disposableReader != null && !disposableReader.isDisposed()) {
+                        disposableReader.dispose();
+                    }
+                    bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
+                    PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
+                    currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
+                    resetStoryGlobals();
+                    readStory();
+                    iterateWordChunksRX();
                 }
-                bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
-                PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
-                currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
-                resetStoryGlobals();
-                readStory();
-                iterateWordChunksRX();
             }
 
             @Override

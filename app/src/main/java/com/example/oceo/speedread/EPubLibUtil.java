@@ -84,19 +84,29 @@ public class EPubLibUtil {
 //        FileUtils.unzipFile(mFilePath, Constant.PATH_EPUB + "/" + mFileName);
     }
 
+    public static int mapSpineToTOC(String spineID, ArrayList<String> tocResList) {
+        int i = 0;
+        while (i < tocResList.size()) {
+            if (spineID.equals(tocResList.get(i))) {
+                return i;
+            }
+            i++;
+        }
+        return -1;
+    }
+
 
     public static int mapTOCToSpine(Book book, String tocID) {
-        // gets the index in the spine to be read
-//        Log.d("mapTOCToSpine", "start");
         List<SpineReference> spineRefs = book.getSpine().getSpineReferences();
-        int i;
-        for (i = 0; i < spineRefs.size(); i++) {
-            if (spineRefs.get(i).getResource().getId().equals(tocID)) {
-                break;
+        int i = 0;
+        while (i < spineRefs.size()) {
+            String spineID = spineRefs.get(i).getResource().getId();
+            if (spineID.equals(tocID)) {
+                return i;
             }
+            i++;
         }
-        Log.d("mapTOCToSpine", "done");
-        return i;
+        return -1;
     }
 
 
