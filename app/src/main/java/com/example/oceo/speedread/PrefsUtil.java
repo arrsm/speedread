@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
+import android.util.Log;
 
 import java.util.HashMap;
 
@@ -14,11 +15,13 @@ public class PrefsUtil {
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putInt("chapter", chapter);
         editor.apply();
+        editor.commit();
     }
 
     public static int readChapterFromPrefs(Activity activity) {
         SharedPreferences sharedPref = activity.getPreferences(Context.MODE_PRIVATE);
         int chapter = sharedPref.getInt("chapter", 0);
+        Log.d("chapter from prefs", String.valueOf(chapter));
         return chapter;
 
     }

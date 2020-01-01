@@ -8,12 +8,6 @@
     android:orientation="vertical"
     tools:context=".MainActivity">
 
-    <Button
-        android:id="@+id/choose_file_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text=" Open " />
-
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -101,10 +95,11 @@
             android:text=" + " />
 
         <Button
-            android:id="@+id/pause_button"
+            android:id="@+id/choose_file_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Pause" />
+            android:text=" Open " />
+
 
     </LinearLayout>
 
