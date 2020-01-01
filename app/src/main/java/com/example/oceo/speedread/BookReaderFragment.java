@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.StringTokenizer;
 import java.util.Timer;
@@ -96,8 +97,12 @@ public class BookReaderFragment extends Fragment {
     private Spinner dropdown;
     private ArrayList<StringBuilder> displayStrs; // crutch to display bolded words. would like to change
     private ArrayList<String> tocResourceIds;
-
+    HashMap<String, String> bookDetails;
     protected String chosenFilePath;
+    protected String chosenFileName;
+
+    final String CHAPTER_KEY = "chapter";
+    final String WORD_KEY = "page";
 
 
     Book book;
@@ -115,6 +120,19 @@ public class BookReaderFragment extends Fragment {
         this.frag = this;
         Bundle bundle = this.getArguments();
         this.chosenFilePath = bundle.getString("file_path");
+        this.chosenFileName = SpeedReadUtilities.bookNameFromPath(this.chosenFilePath);
+        this.bookDetails = PrefsUtil.readBookDetailsFromPrefs(activity, chosenFileName);
+        Log.d(TAG, "i want to read from prefs");
+        Log.d(TAG, String.valueOf(this.bookDetails));
+        if (this.bookDetails == null) {
+            this.bookDetails = new HashMap<String, String>();
+        }
+
+        String tempChpt = this.bookDetails.get(CHAPTER_KEY);
+        String tempWord = this.bookDetails.get(WORD_KEY);
+
+        this.currentChapter = (tempChpt == null ? 0 : Integer.valueOf(tempChpt));
+        this.currentWordIdx = (tempWord == null ? 0 : Integer.valueOf(tempWord));
     }
 
 
@@ -123,11 +141,6 @@ public class BookReaderFragment extends Fragment {
         rootView = inflater.inflate(R.layout.book_reader, container, false);
 
         readFile(this.chosenFilePath);
-        currentChapter = PrefsUtil.readChapterFromPrefs(activity);
-        if (currentChapter <= 0) {
-            Log.d(TAG, "chapter is invalid setting to 0");
-            currentChapter = 0;
-        }
 
         setDefaultValues();
         setupWPMControls();
@@ -176,7 +189,8 @@ public class BookReaderFragment extends Fragment {
                 if (disposableReader != null && !disposableReader.isDisposed()) {
                     disposableReader.dispose();
                 }
-                PrefsUtil.writeChapterToPrefs(activity, currentChapter);
+                bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
+                PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
                 currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
                 resetStoryGlobals();
                 readStory();
@@ -345,7 +359,8 @@ public class BookReaderFragment extends Fragment {
                     if (disposableReader != null && !disposableReader.isDisposed()) {
                         disposableReader.dispose();
                     }
-                    PrefsUtil.writeChapterToPrefs(activity, currentChapter);
+                    bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
+                    PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
                     currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
                     resetStoryGlobals();
                     readStory();
@@ -361,7 +376,9 @@ public class BookReaderFragment extends Fragment {
                 if (currentChapter >= 0) {
                     currentChapter -= 1;
                     if (book != null) {
-                        PrefsUtil.writeChapterToPrefs(activity, currentChapter);
+
+                        bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
+                        PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
                         currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
                         if (disposableReader != null && !disposableReader.isDisposed()) {
                             disposableReader.dispose();
@@ -450,6 +467,7 @@ public class BookReaderFragment extends Fragment {
         fullStoryView.setText(fullText);
         fullStoryView.setMovementMethod(new ScrollingMovementMethod());
     }
+
 
     public static StringTokenizer countWordsUsingStringTokenizer(String words) {
         if (words == null || words.isEmpty()) {

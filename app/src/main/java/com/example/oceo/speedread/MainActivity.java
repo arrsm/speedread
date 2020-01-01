@@ -94,7 +94,6 @@ public class MainActivity extends FragmentActivity implements BookSelectionFragm
 //        Log.d(TAG, "onSRestart");
         super.onRestart();  // Always call the superclass method first
 
-        // Activity being restarted from stopped state
     }
 
     @Override
@@ -103,8 +102,9 @@ public class MainActivity extends FragmentActivity implements BookSelectionFragm
         if (disposableReader != null && !disposableReader.isDisposed()) {
             disposableReader.dispose();
         }
-        PrefsUtil.writeChapterToPrefs(activity, currentChapter);
-        PrefsUtil.writeCurrWordIdxToPrefs(activity, currentWordIdx);
+
+//        PrefsUtil.writeChapterToPrefs(activity, currentChapter);
+//        PrefsUtil.writeCurrWordIdxToPrefs(activity, currentWordIdx);
         super.onPause();  // Always call the superclass method first
     }
 

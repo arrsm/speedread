@@ -38,8 +38,7 @@ public class BookSelectionFragment extends Fragment {
         this.activity = getActivity();
         this.frag = this;
         this.bookList = PrefsUtil.readBooksFromPrefs(activity);
-        Log.d("bookList", this.bookList.toString());
-        displayList = cleanBookNames();
+        displayList = SpeedReadUtilities.bookNamesFromPath(this.bookList);
         selectionCallback = (MainActivity) activity;
     }
 
@@ -67,18 +66,6 @@ public class BookSelectionFragment extends Fragment {
         return rootView;
     }
 
-
-    public ArrayList<String> cleanBookNames() {
-        ArrayList<String> bookNames = new ArrayList<String>();
-        for (String book : this.bookList) {
-            String temp = book;
-            temp = book.substring(book.lastIndexOf('/') + 1);
-            temp = temp.replace(".epub", "");
-            bookNames.add(temp);
-        }
-        return bookNames;
-
-    }
 
     /*
         open files
@@ -115,20 +102,10 @@ public class BookSelectionFragment extends Fragment {
                 }
                 break;
         }
-        filePath = modifyFilePath(filePath);
+        filePath = SpeedReadUtilities.modifyFilePath(filePath);
         selectionCallback.sendFilePath(filePath);
     }
 
-    public String modifyFilePath(String filePath) {
-//         TODO more robust file openings. sometimes the path is different
-        // TODO can go into utils
-        // get this to work for multiple file open apps
-        // right now this is what works for my current phone, a OP6
-        filePath = "/" + filePath.substring(filePath.indexOf(':') + 1, filePath.length());
-        filePath = "/storage/emulated/0/" + filePath;
-        filePath = filePath.replaceAll("//", "/");
-        return filePath;
-    }
 
     /*
         callback method
