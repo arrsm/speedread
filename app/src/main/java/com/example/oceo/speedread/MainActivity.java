@@ -3,6 +3,7 @@ package com.example.oceo.speedread;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
@@ -75,6 +76,9 @@ import static com.example.oceo.speedread.EPubLibUtil.getTOCResourceIds;
 // will have to make this a fragment and add an additional fragment representing a book library
 // prefs needs to associate chapter / page  progress with books
 // prefs to store list of recently used books
+// reset chapter if keeps failing
+// seek to next sentence
+// seek to next paragraph
 
 public class MainActivity extends AppCompatActivity {
 
@@ -101,7 +105,6 @@ public class MainActivity extends AppCompatActivity {
     private Button raiseChapterButton;
     private Button lowerChapterButton;
     private TextView WPM_view;
-    private Button pauseButton;
     private Spinner dropdown;
     private ArrayList<StringBuilder> displayStrs; // crutch to display bolded words. would like to change
 
@@ -126,11 +129,14 @@ public class MainActivity extends AppCompatActivity {
 
 
         currentChapter = PrefsUtil.readChapterFromPrefs(this);
+        if (currentChapter <= 0) {
+            Log.d(TAG, "chapter is invalid setting to 0");
+            currentChapter = 0;
+        }
 
         setDefaultValues();
         setupWPMControls();
         setupChapterControls();
-        pauseButton = findViewById(R.id.pause_button);
         fileChooseButton = findViewById(R.id.choose_file_button);
         fileChooseButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -145,34 +151,17 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-        pauseButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (!disposableReader.isDisposed()) {
-                    Log.d("pause test", "PAUSE IT");
-                    disposableReader.dispose();
-                } else {
-                    resumeStory();
-                }
-
-            }
-        });
-
-
         currentChunkView = findViewById(R.id.current_chunk);
-
         currentChunkView.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (!disposableReader.isDisposed()) {
-                    Log.d("pause test", "PAUSE IT");
                     disposableReader.dispose();
                 } else {
-                    Log.d("resume test", "RESUME IT");
-                    resumeStory();
+                    iterateWordChunksRX();
                 }
 
             }
         });
-
         currentWordView = findViewById(R.id.current_word);
         fullStoryView = findViewById(R.id.file_test);
 
@@ -181,11 +170,6 @@ public class MainActivity extends AppCompatActivity {
         this.tocResourceIds = getTOCResourceIDs();
         displayTOC();
 
-//        ArrayList<String> tocIDs = new ArrayList<String>();
-//        tocIDs = EPubLibUtil.getTOCResourceIds(exploreTOC(this.book), 0, toc);
-//        currentChapter = EPubLibUtil.mapTOCToSpine(this.book, toc.get(14));
-//        readStory(book);
-//        iterateWordChunksRX();
 
     }
 
@@ -196,11 +180,14 @@ public class MainActivity extends AppCompatActivity {
         dropdown = findViewById(R.id.spinner1);
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, TOCTitles);
         dropdown.setAdapter(adapter);
+        dropdown.setSelection(currentChapter);
 
         dropdown.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                Log.d("spinner test", String.valueOf(position));
+                // TODO something weird with indexign is going on here
+                // I thikn it has to do with the fact that its possible for spine items to not be linked in the ToC
+                // choosing chpt 4. Oaths for example takes to 14 but on reopen goes to 15
                 String selectedItem = tocResourceIds.get(position);
                 currentChapter = EPubLibUtil.mapTOCToSpine(book, selectedItem);
                 if (disposableReader != null && !disposableReader.isDisposed()) {
@@ -209,7 +196,7 @@ public class MainActivity extends AppCompatActivity {
                 PrefsUtil.writeChapterToPrefs(activity, currentChapter);
                 currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
                 resetStoryGlobals();
-                readStory(book);
+                readStory();
                 iterateWordChunksRX();
             }
 
@@ -260,26 +247,22 @@ public class MainActivity extends AppCompatActivity {
         return filePath;
     }
 
-
     public void readFile(String fName) {
         Log.d("file open", fName);
 
         this.book = EPubLibUtil.getBook(fName); // think about how to better structure this
 
         if (this.book != null) {
-            readStory(book);
+            readStory();
             iterateWordChunksRX();
         }
     }
 
 
-    public void resumeStory() {
-        iterateWordChunksRX();
-    }
-
-    public void readStory(Book unused) {
+    public void readStory() {
         resetStoryGlobals();
-        fullText = new StringBuilder(readSampleChapter(book, currentChapter));
+        String chapter = readSampleChapter(book, currentChapter);
+        fullText = new StringBuilder(chapter);
 //        setStoryContent(fullText);
 
         // TODO store max size in prefs so we dont have to calculate each open
@@ -297,7 +280,6 @@ public class MainActivity extends AppCompatActivity {
         chunkIdx = 0;
     }
 
-
     public int getNextSentences(ArrayList<String> tokens, int numSentences) {
         // TODO also keep track of where the sentences end for formatting
         int tempChunkIdx = currentWordIdx;
@@ -313,9 +295,7 @@ public class MainActivity extends AppCompatActivity {
             }
             tempChunkIdx += 1;
             foundSentences += 1;
-//            Log.d("sentenceCount: ", String.valueOf(foundSentences));
         }
-//        Log.d("what NADA", tokens.get(tempChunkIdx));
         return tempChunkIdx;
     }
 
@@ -345,6 +325,51 @@ public class MainActivity extends AppCompatActivity {
         return displayStrs;
     }
 
+
+    @Override
+    protected void onStart() {
+//        Log.d("Lifecycle", "onStart");
+        super.onStart();  // Always call the superclass method first
+
+    }
+
+
+    @Override
+    protected void onRestart() {
+//        Log.d("Lifecycle", "onSRestart");
+        super.onRestart();  // Always call the superclass method first
+
+        // Activity being restarted from stopped state
+    }
+
+    @Override
+    public void onPause() {
+//        Log.d("Lifecycle", "onPause");
+        if (disposableReader != null && !disposableReader.isDisposed()) {
+            disposableReader.dispose();
+        }
+        PrefsUtil.writeChapterToPrefs(activity, currentChapter);
+        PrefsUtil.writeCurrWordIdxToPrefs(activity, currentWordIdx);
+        super.onPause();  // Always call the superclass method first
+    }
+
+    @Override
+    protected void onStop() {
+//        Log.d("Lifecycle", "onStop");
+        super.onStop();  // Always call the superclass method first
+    }
+
+    @Override
+    public void onResume() {
+        Log.d("Lifecycle", "onResume");
+        super.onResume();  // Always call the superclass method first
+        if (book != null) {
+            currentWordIdx = PrefsUtil.readCurrWordIdxFromPrefs(activity);
+            iterateWordChunksRX();
+        }
+    }
+
+
     public void setDefaultValues() {
         WPM = 175;
         WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
@@ -353,10 +378,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void iterateWordChunksRX() {
-        // TODO better way to do this is probably https://stackoverflow.com/questions/33291245/rxjava-delay-for-each-item-of-list-emitted
-        // check repeat as well
-
-
         int chunkStartIdx = currSentenceStart;
         int chunkMaxIdx = getNextSentences(story, 1);
         displayStrs = buildBoldSentences(chunkStartIdx, chunkMaxIdx);
@@ -410,7 +431,6 @@ public class MainActivity extends AppCompatActivity {
 
         raiseChapterButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-//                Log.d("the book:", String.valueOf(book));
                 currentChapter += 1;
                 if (book != null) {
                     if (disposableReader != null && !disposableReader.isDisposed()) {
@@ -419,7 +439,7 @@ public class MainActivity extends AppCompatActivity {
                     PrefsUtil.writeChapterToPrefs(activity, currentChapter);
                     currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
                     resetStoryGlobals();
-                    readStory(book);
+                    readStory();
                     iterateWordChunksRX();
                 }
             }
@@ -438,7 +458,7 @@ public class MainActivity extends AppCompatActivity {
                             disposableReader.dispose();
                         }
                         resetStoryGlobals();
-                        readStory(book);
+                        readStory();
                         iterateWordChunksRX();
                     }
                 }
@@ -517,7 +537,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-
     public void setStoryContent(StringBuilder fullText) {
         fullStoryView.setText(fullText);
         fullStoryView.setMovementMethod(new ScrollingMovementMethod());
@@ -541,11 +560,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void getTotalChapters() {
-
-    }
-
-
     public String readSampleChapter(Book book, int chapterNumber) {
         // TODO test if invalid chapter passed in
         String chapterContents = null;
@@ -559,7 +573,6 @@ public class MainActivity extends AppCompatActivity {
         return chapterContents;
 
     }
-
 
     private String getChapter(Spine spine, int spineLocation) {
         if (spineLocation > spine.size()) {
@@ -597,7 +610,6 @@ public class MainActivity extends AppCompatActivity {
         Spanned HTMLText = Html.fromHtml(formattedLine);
         return HTMLText;
     }
-
 
     private String formatLine(String line) {
         /*

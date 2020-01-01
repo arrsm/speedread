@@ -87,7 +87,7 @@ public class EPubLibUtil {
 
     public static int mapTOCToSpine(Book book, String tocID) {
         // gets the index in the spine to be read
-        Log.d("mapTOCToSpine", "start");
+//        Log.d("mapTOCToSpine", "start");
         List<SpineReference> spineRefs = book.getSpine().getSpineReferences();
         int i;
         for (i = 0; i < spineRefs.size(); i++) {
@@ -114,7 +114,7 @@ public class EPubLibUtil {
                 tocString.append("\t");
             }
             tocString.append(tocReference.getTitle());
-            Log.i("epublib", tocString.toString());
+//            Log.i("epublib", tocString.toString());
 //            toc.add(tocString.toString());
             toc.add(tocReference.getResource().getId()); // resource Id
             getTOCResourceIds(tocReference.getChildren(), depth + 1, toc);
