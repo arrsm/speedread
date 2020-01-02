@@ -51,14 +51,11 @@ public class BookReaderFragment extends Fragment {
 
     /*
     TODO check file permissions
-    file selection tool
     write to prefs when app closed or minimized
     can i count the number of words in file faster? currently converting StringBuilder to String and tokenizing
     min values for WPM (setting to 0 for example will cause a never ending postdelayed call)
     show values changing WHILE button held https://stackoverflow.com/questions/12071090/triggering-event-continuously-when-button-is-pressed-down-in-android
-    also prob cant touch both at the same time
     indication for when reading is happening
-    scroll up or down to get to previous lines. eg if iw ant to reread a paragraph
     keep track of start and end indexes to have better resume experience
     delay on sentence end
     take some time to think about when exactly globals need to be reset and if they need to be global at all
@@ -76,6 +73,7 @@ public class BookReaderFragment extends Fragment {
     Fragment frag;
     View rootView;
 
+    Book book;
     private long WPM;
     private long WPM_MS;
     private int currSentenceStart;
@@ -84,9 +82,16 @@ public class BookReaderFragment extends Fragment {
     private int maxWordIdx; // last word in chapter
     private int chunkIdx; // word being iterated over in chunk
     private int currentChapter;
-    private int chunkSize; // number of words displayed as focus
+    int firstTimeFlag = 0; // should spinner action be called
     protected StringBuilder fullText; // holds full story in memory
     private ArrayList<String> story; // fullText converted to arraylist
+    private ArrayList<StringBuilder> displayStrs; // crutch to display bolded words. would like to change
+    private ArrayList<String> tocResourceIds;
+    HashMap<String, String> bookDetails;
+    protected String chosenFilePath;
+    protected String chosenFileName;
+    Disposable disposableReader;
+
     private TextView fullStoryView;
     private TextView currentWordView;
     private TextView currentChunkView;
@@ -97,21 +102,10 @@ public class BookReaderFragment extends Fragment {
     private Button lowerChapterButton;
     private TextView WPM_view;
     private Spinner dropdown;
-    private ArrayList<StringBuilder> displayStrs; // crutch to display bolded words. would like to change
-    private ArrayList<String> tocResourceIds;
-    HashMap<String, String> bookDetails;
-    protected String chosenFilePath;
-    protected String chosenFileName;
 
     final String CHAPTER_KEY = "chapter";
     final String WORD_KEY = "page";
 
-    int firstTimeFlag = 0; // should spinner action be called
-
-
-    Book book;
-
-    Disposable disposableReader;
 
     //long held incrementers
     Timer fixedTimer = new Timer();
@@ -137,6 +131,29 @@ public class BookReaderFragment extends Fragment {
 
         this.currentChapter = (tempChpt == null ? 0 : Integer.valueOf(tempChpt));
         this.currentWordIdx = (tempWord == null ? 0 : Integer.valueOf(tempWord));
+    }
+
+    @Override
+    public void onResume() {
+        if (book != null) {
+            String tempChpt = this.bookDetails.get(CHAPTER_KEY);
+            String tempWord = this.bookDetails.get(WORD_KEY);
+            this.currentChapter = (tempChpt == null ? 0 : Integer.valueOf(tempChpt));
+            this.currentWordIdx = (tempWord == null ? 0 : Integer.valueOf(tempWord));
+//            iterateWordChunksRX();
+        }
+        super.onResume();
+    }
+
+    @Override
+    public void onPause() {
+        if (disposableReader != null && !disposableReader.isDisposed()) {
+            disposableReader.dispose();
+        }
+        bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
+        bookDetails.put(WORD_KEY, String.valueOf(currentWordIdx));
+        PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
+        super.onPause();
     }
 
 
@@ -225,7 +242,6 @@ public class BookReaderFragment extends Fragment {
         return tocIDs;
     }
 
-
     public void readFile(String fName) {
         Log.d("file open", fName);
 
@@ -239,7 +255,6 @@ public class BookReaderFragment extends Fragment {
             iterateWordChunksRX();
         }
     }
-
 
     public void readStory() {
         resetStoryGlobals();
@@ -308,9 +323,8 @@ public class BookReaderFragment extends Fragment {
     }
 
     public void setDefaultValues() {
-        WPM = 175;
+        WPM = 230;
         WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
-        chunkSize = 30;
         resetStoryGlobals();
     }
 
@@ -481,7 +495,6 @@ public class BookReaderFragment extends Fragment {
         fullStoryView.setText(fullText);
         fullStoryView.setMovementMethod(new ScrollingMovementMethod());
     }
-
 
     public static StringTokenizer countWordsUsingStringTokenizer(String words) {
         if (words == null || words.isEmpty()) {

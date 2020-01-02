@@ -99,12 +99,7 @@ public class MainActivity extends FragmentActivity implements BookSelectionFragm
     @Override
     public void onPause() {
 //        Log.d(TAG, "onPause");
-        if (disposableReader != null && !disposableReader.isDisposed()) {
-            disposableReader.dispose();
-        }
 
-//        PrefsUtil.writeChapterToPrefs(activity, currentChapter);
-//        PrefsUtil.writeCurrWordIdxToPrefs(activity, currentWordIdx);
         super.onPause();  // Always call the superclass method first
     }
 
@@ -118,10 +113,7 @@ public class MainActivity extends FragmentActivity implements BookSelectionFragm
     public void onResume() {
         Log.d(TAG, "onResume");
         super.onResume();  // Always call the superclass method first
-//        if (book != null) {
-//            currentWordIdx = PrefsUtil.readCurrWordIdxFromPrefs(activity);
-//            iterateWordChunksRX();
-//        }
+
     }
 
 
