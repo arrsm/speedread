@@ -163,7 +163,7 @@ public class BookReaderFragment extends Fragment {
         this.book = readFile(this.chosenFilePath);
         setDefaultValues();
         setupWPMControls();
-        setupChapterControls();
+        setupChapterControls(this.book);
 
 
         currentChunkView = rootView.findViewById(R.id.current_chunk);
@@ -284,12 +284,12 @@ public class BookReaderFragment extends Fragment {
         return startIdx;
     }
 
-    public ArrayList<StringBuilder> buildBoldSentences(int startIdx, int endIdx) {
+    public ArrayList<StringBuilder> buildBoldSentences(ArrayList<String> tokenList, int startIdx, int endIdx) {
         // TODO wish there was a better way to do this rather than building and holding o(n^2)
         //  strings in the number of words
 
-        if (maxWordIdx < endIdx) {
-            endIdx = maxWordIdx;
+        if (endIdx > this.maxWordIdx) {
+            endIdx = this.maxWordIdx;
         }
 
         ArrayList<StringBuilder> displayStrs = new ArrayList<StringBuilder>();
@@ -299,9 +299,9 @@ public class BookReaderFragment extends Fragment {
 
             for (int i = startIdx; i < endIdx; i++) {
                 if (targetWord == i) {
-                    formattedDisplayStr.append("<b>" + story.get(i) + "</b> ");
+                    formattedDisplayStr.append("<b>" + tokenList.get(i) + "</b> ");
                 } else {
-                    formattedDisplayStr.append(story.get(i) + " ");
+                    formattedDisplayStr.append(tokenList.get(i) + " ");
                 }
             }
             displayStrs.add(formattedDisplayStr);
@@ -312,10 +312,10 @@ public class BookReaderFragment extends Fragment {
 
 
     public void iterateWords() {
-        int tempWordIdx = currentWordIdx;
+        int tempWordIdx = this.currentWordIdx;
         int sentencesEndIdx = getNextSentencesEndIdx(story, 1);
         //TODO something isnt being handled right and it results in a start from 0 on open with the next sentence being where reader left off
-        displayStrs = buildBoldSentences(currSentenceStart, sentencesEndIdx);
+        this.displayStrs = buildBoldSentences(this.story, currSentenceStart, sentencesEndIdx);
 
         Observable rangeObs = Observable.range(tempWordIdx, sentencesEndIdx - currentWordIdx);
         rangeObs = rangeObs.concatMap(i -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS));
@@ -323,11 +323,11 @@ public class BookReaderFragment extends Fragment {
 
         disposableReader = rangeObs.subscribe(wordIdx -> {
                     Log.d("The OBS", String.valueOf(wordIdx) + " / " + String.valueOf(sentencesEndIdx));
-                    if (currSentenceIdx < displayStrs.size()) {
-                        currentChunkView.setText(Html.fromHtml(displayStrs.get(currSentenceIdx).toString()));
-                        currentWordView.setText(story.get(currentWordIdx));
-                        currSentenceIdx++;
-                        currentWordIdx++;
+                    if (this.currSentenceIdx < this.displayStrs.size()) {
+                        currentChunkView.setText(Html.fromHtml(this.displayStrs.get(this.currSentenceIdx).toString()));
+                        this.currentWordView.setText(this.story.get(this.currentWordIdx));
+                        this.currSentenceIdx++;
+                        this.currentWordIdx++;
                     } else {
                         // can reach here if we pause then resume
                         Log.d("The OBS", "Is Out of Bounds");
@@ -357,7 +357,7 @@ public class BookReaderFragment extends Fragment {
         fixedTimer = new Timer();
     }
 
-    public void setupChapterControls() {
+    public void setupChapterControls(Book book) {
 
         raiseChapterButton = rootView.findViewById(R.id.raise_chpt_button);
         lowerChapterButton = rootView.findViewById(R.id.lower_chpt_btn);
@@ -376,7 +376,7 @@ public class BookReaderFragment extends Fragment {
                     currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
                     resetStoryGlobals();
                     readStory();
-//                    iterateWords();
+                    iterateWords();
                 }
             }
         });
