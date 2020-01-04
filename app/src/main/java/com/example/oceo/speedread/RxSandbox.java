@@ -45,6 +45,10 @@ public class RxSandbox {
         rangeObs = rangeObs.concatMap(i -> Observable.just(i).delay(500, TimeUnit.MILLISECONDS));
         rangeObs.subscribe(d -> Log.d(TAG, String.valueOf(System.currentTimeMillis()) + ": " + String.valueOf(d)));
 
+        /* wrap in another */
+
+//        rangeObs = rangeObs.concatMap(i -> Observable.just(i).delay(500, TimeUnit.MILLISECONDS));
+//        rangeObs.subscribe(d -> Log.d(TAG, String.valueOf(System.currentTimeMillis()) + ": " + String.valueOf(d)));
 
     }
 }
