@@ -139,13 +139,14 @@ public class BookReaderFragment extends Fragment {
             String tempChpt = this.bookDetails.get(CHAPTER_KEY);
             String tempWord = this.bookDetails.get(WORD_KEY);
             this.currentChapter = (tempChpt == null ? 0 : Integer.valueOf(tempChpt));
-            this.currentWordIdx = (tempWord == null ? 0 : Integer.valueOf(tempWord));
+//            this.currentWordIdx = (tempWord == null ? 0 : Integer.valueOf(tempWord));
         }
         super.onResume();
     }
 
     @Override
     public void onPause() {
+        Log.d(TAG, "onCreateView");
         if (disposableReader != null && !disposableReader.isDisposed()) {
             disposableReader.dispose();
         }
@@ -158,6 +159,7 @@ public class BookReaderFragment extends Fragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        Log.d(TAG, "onCreateView");
         rootView = inflater.inflate(R.layout.book_reader, container, false);
 
         this.book = readFile(this.chosenFilePath);
@@ -265,12 +267,9 @@ public class BookReaderFragment extends Fragment {
         }
     }
 
-    public int getNextSentencesEndIdx(ArrayList<String> tokens, int numSentences) {
+    public int getNextSentencesEndIdx(ArrayList<String> tokens, int numSentences, int startIdx) {
         // TODO also keep track of where the sentences end for formatting
-        int startIdx = currentWordIdx;
         int foundSentences = 0;
-
-
         while (foundSentences < numSentences) {
             while (startIdx < maxWordIdx &&
                     (!tokens.get(startIdx).contains(".")
@@ -313,23 +312,25 @@ public class BookReaderFragment extends Fragment {
 
     public void iterateWords() {
         int tempWordIdx = this.currentWordIdx;
-        int sentencesEndIdx = getNextSentencesEndIdx(story, 1);
+        int sentencesEndIdx = getNextSentencesEndIdx(story, 1, this.currentWordIdx);
         //TODO something isnt being handled right and it results in a start from 0 on open with the next sentence being where reader left off
         this.displayStrs = buildBoldSentences(this.story, currSentenceStart, sentencesEndIdx);
+//        ArrayList<StringBuilder> formattedStrings = buildBoldSentences(this.story, currSentenceStart, sentencesEndIdx);
 
         Observable rangeObs = Observable.range(tempWordIdx, sentencesEndIdx - currentWordIdx);
         rangeObs = rangeObs.concatMap(i -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS));
+        rangeObs = rangeObs.delay(400, TimeUnit.MILLISECONDS); // delay at the end of the sentence
         rangeObs = rangeObs.observeOn(AndroidSchedulers.mainThread());
 
         disposableReader = rangeObs.subscribe(wordIdx -> {
                     Log.d("The OBS", String.valueOf(wordIdx) + " / " + String.valueOf(sentencesEndIdx));
                     if (this.currSentenceIdx < this.displayStrs.size()) {
+
                         currentChunkView.setText(Html.fromHtml(this.displayStrs.get(this.currSentenceIdx).toString()));
                         this.currentWordView.setText(this.story.get(this.currentWordIdx));
                         this.currSentenceIdx++;
                         this.currentWordIdx++;
                     } else {
-                        // can reach here if we pause then resume
                         Log.d("The OBS", "Is Out of Bounds");
                     }
 
@@ -430,9 +431,9 @@ public class BookReaderFragment extends Fragment {
                     fixedTimer.scheduleAtFixedRate(new TimerTask() {
                         @Override
                         public void run() {
-                            WPM += 10;
+                            WPM += 5;
                         }
-                    }, 1000, 100);
+                    }, 500, 50);
                 } else if (event.getAction() == MotionEvent.ACTION_UP) {
                     fixedTimer.cancel();
                     initTimer();
@@ -458,13 +459,13 @@ public class BookReaderFragment extends Fragment {
                     fixedTimer.scheduleAtFixedRate(new TimerTask() {
                         @Override
                         public void run() {
-                            WPM -= 10;
+                            WPM -= 5;
                         }
-                    }, 1000, 100);
+                    }, 500, 50);
+                    WPM_view.setText(String.valueOf(WPM));
                 } else if (event.getAction() == MotionEvent.ACTION_UP) {
                     fixedTimer.cancel();
                     initTimer();
-                    WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
                 }
 
                 return false;
