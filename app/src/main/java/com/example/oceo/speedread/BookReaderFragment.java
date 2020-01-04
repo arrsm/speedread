@@ -67,6 +67,7 @@ public class BookReaderFragment extends Fragment {
     seek to next sentence
     seek to next paragraph
     would like to refactor so that all class variables are set in onCreateView or some different function
+    bug because currsentene start isnt kept in prefs
  */
 
     String TAG = "BookReaderFragment";
@@ -78,10 +79,9 @@ public class BookReaderFragment extends Fragment {
     private long WPM;
     private long WPM_MS;
     private int currSentenceStart;
-    private int currSentenceEnd;
+    private int currSentenceIdx;
     private int currentWordIdx; // current word being iterated over
     private int maxWordIdx; // last word in chapter
-    private int chunkIdx; // word being iterated over in chunk
     private int currentChapter;
     int firstTimeFlag = 0; // should spinner action be called
     protected StringBuilder fullText; // holds full story in memory
@@ -134,12 +134,12 @@ public class BookReaderFragment extends Fragment {
 
     @Override
     public void onResume() {
+        Log.d(TAG, "bookreader fragment resumes");
         if (book != null) {
             String tempChpt = this.bookDetails.get(CHAPTER_KEY);
             String tempWord = this.bookDetails.get(WORD_KEY);
             this.currentChapter = (tempChpt == null ? 0 : Integer.valueOf(tempChpt));
             this.currentWordIdx = (tempWord == null ? 0 : Integer.valueOf(tempWord));
-//            iterateWords();
         }
         super.onResume();
     }
@@ -161,16 +161,6 @@ public class BookReaderFragment extends Fragment {
         rootView = inflater.inflate(R.layout.book_reader, container, false);
 
         this.book = readFile(this.chosenFilePath);
-        if (this.book != null) {
-            PrefsUtil.writeBookToPrefs(activity, this.chosenFilePath);
-            this.tocResourceIds = getTOCResourceIDs();
-            displayTOC();
-            readStory();
-            iterateWords();
-
-        }
-
-
         setDefaultValues();
         setupWPMControls();
         setupChapterControls();
@@ -190,8 +180,15 @@ public class BookReaderFragment extends Fragment {
         currentWordView = rootView.findViewById(R.id.current_word);
         fullStoryView = rootView.findViewById(R.id.file_test);
 
-//        this.tocResourceIds = getTOCResourceIDs();
-//        displayTOC();
+        if (this.book != null) {
+            PrefsUtil.writeBookToPrefs(activity, this.chosenFilePath);
+            this.tocResourceIds = getTOCResourceIDs();
+            displayTOC();
+            readStory();
+            iterateWords();
+
+        }
+
         return rootView;
 
     }
@@ -315,20 +312,21 @@ public class BookReaderFragment extends Fragment {
 
 
     public void iterateWords() {
-        int chunkStartIdx = currSentenceStart;
+        int tempWordIdx = currentWordIdx;
         int sentencesEndIdx = getNextSentencesEndIdx(story, 1);
-        displayStrs = buildBoldSentences(chunkStartIdx, sentencesEndIdx);
+        //TODO something isnt being handled right and it results in a start from 0 on open with the next sentence being where reader left off
+        displayStrs = buildBoldSentences(currSentenceStart, sentencesEndIdx);
 
-        Observable rangeObs = Observable.range(currentWordIdx, sentencesEndIdx - currentWordIdx)
-                .concatMap(i -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS))
-                .observeOn(AndroidSchedulers.mainThread());
+        Observable rangeObs = Observable.range(tempWordIdx, sentencesEndIdx - currentWordIdx);
+        rangeObs = rangeObs.concatMap(i -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS));
+        rangeObs = rangeObs.observeOn(AndroidSchedulers.mainThread());
 
         disposableReader = rangeObs.subscribe(wordIdx -> {
-//                    Log.d("The OBS", String.valueOf(wordIdx) + " / " + String.valueOf(chunkMaxIdx));
-                    if (chunkIdx < displayStrs.size()) { // check we dont go out of bounds
-                        currentChunkView.setText(Html.fromHtml(displayStrs.get(chunkIdx).toString()));
+                    Log.d("The OBS", String.valueOf(wordIdx) + " / " + String.valueOf(sentencesEndIdx));
+                    if (currSentenceIdx < displayStrs.size()) {
+                        currentChunkView.setText(Html.fromHtml(displayStrs.get(currSentenceIdx).toString()));
                         currentWordView.setText(story.get(currentWordIdx));
-                        chunkIdx++;
+                        currSentenceIdx++;
                         currentWordIdx++;
                     } else {
                         // can reach here if we pause then resume
@@ -342,15 +340,15 @@ public class BookReaderFragment extends Fragment {
                 () -> {
 //                        Log.d("obs", "k do the next chunk");
                     if (currentWordIdx < maxWordIdx) {
-                        chunkIdx = 0;
+                        currSentenceIdx = 0;
                         currSentenceStart = currentWordIdx;
-                        // reset position and scroll through next chunk
                         iterateWords();
                     } else {
-                        Log.d("Observable", "No more chunks");
+                        Log.d("Observable", "No more sentences");
                     }
                 });
     }
+
 
     void initTimer() {
         /*
@@ -378,7 +376,7 @@ public class BookReaderFragment extends Fragment {
                     currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
                     resetStoryGlobals();
                     readStory();
-                    iterateWords();
+//                    iterateWords();
                 }
             }
         });
@@ -479,9 +477,8 @@ public class BookReaderFragment extends Fragment {
 
     public void resetStoryGlobals() {
         currSentenceStart = 0;
-        currSentenceEnd = 0;
         currentWordIdx = 0;
-        chunkIdx = 0;
+        currSentenceIdx = 0;
     }
 
     public void setDefaultValues() {

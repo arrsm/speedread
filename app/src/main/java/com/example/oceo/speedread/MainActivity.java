@@ -87,6 +87,8 @@ public class MainActivity extends FragmentActivity implements BookSelectionFragm
 //        Log.d(TAG, "onStart");
         super.onStart();  // Always call the superclass method first
 
+//        RxSandbox.testMappingObs();
+
     }
 
     @Override
