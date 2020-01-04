@@ -66,6 +66,7 @@ public class BookReaderFragment extends Fragment {
     reset chapter if keeps failing
     seek to next sentence
     seek to next paragraph
+    would like to refactor so that all class variables are set in onCreateView or some different function
  */
 
     String TAG = "BookReaderFragment";
@@ -120,8 +121,6 @@ public class BookReaderFragment extends Fragment {
         this.chosenFilePath = bundle.getString("file_path");
         this.chosenFileName = SpeedReadUtilities.bookNameFromPath(this.chosenFilePath);
         this.bookDetails = PrefsUtil.readBookDetailsFromPrefs(activity, chosenFileName);
-        Log.d(TAG, "i want to read from prefs");
-        Log.d(TAG, String.valueOf(this.bookDetails));
         if (this.bookDetails == null) {
             this.bookDetails = new HashMap<String, String>();
         }
@@ -140,7 +139,7 @@ public class BookReaderFragment extends Fragment {
             String tempWord = this.bookDetails.get(WORD_KEY);
             this.currentChapter = (tempChpt == null ? 0 : Integer.valueOf(tempChpt));
             this.currentWordIdx = (tempWord == null ? 0 : Integer.valueOf(tempWord));
-//            iterateWordChunksRX();
+//            iterateWords();
         }
         super.onResume();
     }
@@ -161,7 +160,16 @@ public class BookReaderFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         rootView = inflater.inflate(R.layout.book_reader, container, false);
 
-        readFile(this.chosenFilePath);
+        this.book = readFile(this.chosenFilePath);
+        if (this.book != null) {
+            PrefsUtil.writeBookToPrefs(activity, this.chosenFilePath);
+            this.tocResourceIds = getTOCResourceIDs();
+            displayTOC();
+            readStory();
+            iterateWords();
+
+        }
+
 
         setDefaultValues();
         setupWPMControls();
@@ -174,7 +182,7 @@ public class BookReaderFragment extends Fragment {
                 if (!disposableReader.isDisposed()) {
                     disposableReader.dispose();
                 } else {
-                    iterateWordChunksRX();
+                    iterateWords();
                 }
 
             }
@@ -182,8 +190,6 @@ public class BookReaderFragment extends Fragment {
         currentWordView = rootView.findViewById(R.id.current_word);
         fullStoryView = rootView.findViewById(R.id.file_test);
 
-
-//        this.book = EPubLibUtil.getBook("storage/emulated/0/Books/MoonReader/Brandon Sanderson - Oathbringer_ Book Three of the Stormlight Archive-Tor Books (2017).epub");
 //        this.tocResourceIds = getTOCResourceIDs();
 //        displayTOC();
         return rootView;
@@ -224,7 +230,7 @@ public class BookReaderFragment extends Fragment {
                     currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
                     resetStoryGlobals();
                     readStory();
-                    iterateWordChunksRX();
+                    iterateWords();
                 }
             }
 
@@ -242,58 +248,43 @@ public class BookReaderFragment extends Fragment {
         return tocIDs;
     }
 
-    public void readFile(String fName) {
-        Log.d("file open", fName);
 
-        this.book = EPubLibUtil.getBook(fName); // think about how to better structure this
-        Log.d("got the book", String.valueOf(this.book));
-        if (this.book != null) {
-            PrefsUtil.writeBookToPrefs(activity, fName);
-            this.tocResourceIds = getTOCResourceIDs();
-            displayTOC();
-            readStory();
-            iterateWordChunksRX();
-        }
+    public Book readFile(String fName) {
+        Book book = EPubLibUtil.getBook(fName); // think about how to better structure this
+        return book;
     }
 
     public void readStory() {
+        // sets fullText (String containing entire chapter text)
+        // and calculates and sets story(ArrayList of each word in chapter)
         resetStoryGlobals();
         String chapter = readSampleChapter(book, currentChapter);
-        fullText = new StringBuilder(chapter);
-//        setStoryContent(fullText);
+        this.fullText = new StringBuilder(chapter);
 
-        // TODO store max size in prefs so we dont have to calculate each open
-        StringTokenizer tokens = countWordsUsingStringTokenizer(fullText.toString());
+        StringTokenizer tokens = getWordTokens(fullText.toString());
         if (tokens != null) {
-            maxWordIdx = tokens.countTokens();
-            story = tokensToArrayList(tokens);
+            this.maxWordIdx = tokens.countTokens();
+            this.story = tokensToArrayList(tokens);
         }
     }
 
-    public void resetStoryGlobals() {
-        currSentenceStart = 0;
-        currSentenceEnd = 0;
-        currentWordIdx = 0;
-        chunkIdx = 0;
-    }
-
-    public int getNextSentences(ArrayList<String> tokens, int numSentences) {
+    public int getNextSentencesEndIdx(ArrayList<String> tokens, int numSentences) {
         // TODO also keep track of where the sentences end for formatting
-        int tempChunkIdx = currentWordIdx;
+        int startIdx = currentWordIdx;
         int foundSentences = 0;
 
 
         while (foundSentences < numSentences) {
-            while (tempChunkIdx < maxWordIdx &&
-                    (!tokens.get(tempChunkIdx).contains(".")
-                            || tokens.get(tempChunkIdx).contains("?")
-                            || tokens.get(tempChunkIdx).contains("!"))) {
-                tempChunkIdx++;
+            while (startIdx < maxWordIdx &&
+                    (!tokens.get(startIdx).contains(".")
+                            || tokens.get(startIdx).contains("?")
+                            || tokens.get(startIdx).contains("!"))) {
+                startIdx++;
             }
-            tempChunkIdx += 1;
+            startIdx += 1;
             foundSentences += 1;
         }
-        return tempChunkIdx;
+        return startIdx;
     }
 
     public ArrayList<StringBuilder> buildBoldSentences(int startIdx, int endIdx) {
@@ -322,18 +313,13 @@ public class BookReaderFragment extends Fragment {
         return displayStrs;
     }
 
-    public void setDefaultValues() {
-        WPM = 230;
-        WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
-        resetStoryGlobals();
-    }
 
-    public void iterateWordChunksRX() {
+    public void iterateWords() {
         int chunkStartIdx = currSentenceStart;
-        int chunkMaxIdx = getNextSentences(story, 1);
-        displayStrs = buildBoldSentences(chunkStartIdx, chunkMaxIdx);
+        int sentencesEndIdx = getNextSentencesEndIdx(story, 1);
+        displayStrs = buildBoldSentences(chunkStartIdx, sentencesEndIdx);
 
-        Observable rangeObs = Observable.range(currentWordIdx, chunkMaxIdx - currentWordIdx)
+        Observable rangeObs = Observable.range(currentWordIdx, sentencesEndIdx - currentWordIdx)
                 .concatMap(i -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS))
                 .observeOn(AndroidSchedulers.mainThread());
 
@@ -359,7 +345,7 @@ public class BookReaderFragment extends Fragment {
                         chunkIdx = 0;
                         currSentenceStart = currentWordIdx;
                         // reset position and scroll through next chunk
-                        iterateWordChunksRX();
+                        iterateWords();
                     } else {
                         Log.d("Observable", "No more chunks");
                     }
@@ -392,7 +378,7 @@ public class BookReaderFragment extends Fragment {
                     currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
                     resetStoryGlobals();
                     readStory();
-                    iterateWordChunksRX();
+                    iterateWords();
                 }
             }
         });
@@ -413,7 +399,7 @@ public class BookReaderFragment extends Fragment {
                         }
                         resetStoryGlobals();
                         readStory();
-                        iterateWordChunksRX();
+                        iterateWords();
                     }
                 }
             }
@@ -491,12 +477,20 @@ public class BookReaderFragment extends Fragment {
 
     }
 
-    public void setStoryContent(StringBuilder fullText) {
-        fullStoryView.setText(fullText);
-        fullStoryView.setMovementMethod(new ScrollingMovementMethod());
+    public void resetStoryGlobals() {
+        currSentenceStart = 0;
+        currSentenceEnd = 0;
+        currentWordIdx = 0;
+        chunkIdx = 0;
     }
 
-    public static StringTokenizer countWordsUsingStringTokenizer(String words) {
+    public void setDefaultValues() {
+        WPM = 230;
+        WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
+        resetStoryGlobals();
+    }
+
+    public static StringTokenizer getWordTokens(String words) {
         if (words == null || words.isEmpty()) {
             return null;
         }
@@ -580,6 +574,11 @@ public class BookReaderFragment extends Fragment {
             line = line.substring(line.length());
         }
         return line;
+    }
+
+    public void setStoryContent(StringBuilder fullText) {
+        fullStoryView.setText(fullText);
+        fullStoryView.setMovementMethod(new ScrollingMovementMethod());
     }
 
 
