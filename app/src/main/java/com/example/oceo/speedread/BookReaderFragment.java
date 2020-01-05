@@ -283,7 +283,7 @@ public class BookReaderFragment extends Fragment {
 
             for (int i = startIdx; i < endIdx; i++) {
                 if (targetWord == i) {
-                    formattedDisplayStr.append("<b>" + tokenList.get(i) + "</b> ");
+                    formattedDisplayStr.append("<font color=\"gray\">" + tokenList.get(i) + "</font> ");
                 } else {
                     formattedDisplayStr.append(tokenList.get(i) + " ");
                 }
