@@ -54,29 +54,28 @@ public class PrefsUtil {
     }
 
 
-    public static void writeCurrWordIdxToPrefs(Activity activity, String bookName, int wordIdx) {
+    public static void writeLongToPrefs(Activity activity, String key, long val) {
         SharedPreferences sharedPref = activity.getPreferences(Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
-        editor.putInt("currWordIdx", wordIdx);
+        editor.putLong(key, val);
         editor.apply();
+        editor.commit();
     }
 
-    public static int readCurrWordIdxFromPrefs(Activity activity, String bookName) {
+    public static long readLongFromPrefs(Activity activity, String key) {
         SharedPreferences sharedPref = activity.getPreferences(Context.MODE_PRIVATE);
-        int chapter = sharedPref.getInt("currWordIdx", 0);
-        return chapter;
-    }
-
-    public static void writeRecentlyUsedBookToPrefs(Activity activity, String bookName) {
-        SharedPreferences sharedPref = activity.getPreferences(Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPref.edit();
-        editor.putString("recent_books", bookName);
-        editor.apply();
-    }
-
-    public static void readRecentlyUsedBookToPrefs(Activity activity) {
-        SharedPreferences sharedPref = activity.getPreferences(Context.MODE_PRIVATE);
-        sharedPref.getString("recent_books", "");
+        long val;
+        switch (key) {
+            case "wpm":
+                val = sharedPref.getLong(key, 200);
+                break;
+            case "sentence_delay":
+                val = sharedPref.getLong(key, 250);
+                break;
+            default:
+                val = sharedPref.getLong(key, 0);
+        }
+        return val;
     }
 
 
