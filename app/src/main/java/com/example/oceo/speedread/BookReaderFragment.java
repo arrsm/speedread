@@ -57,18 +57,10 @@ public class BookReaderFragment extends Fragment {
     show values changing WHILE button held https://stackoverflow.com/questions/12071090/triggering-event-continuously-when-button-is-pressed-down-in-android
     indication for when reading is happening
     keep track of start and end indexes to have better resume experience
-    delay on sentence end
-    take some time to think about when exactly globals need to be reset and if they need to be global at all
-    play with delimeter settings
-    will have to make this a fragment and add an additional fragment representing a book library
-    prefs needs to associate chapter / page  progress with books
-    prefs to store list of recently used books
     reset chapter if keeps failing
     seek to next sentence
     seek to next paragraph
-    would like to refactor so that all class variables are set in onCreateView or some different function
-    bug because currsentene start isnt kept in prefs
- */
+    */
 
     String TAG = "BookReaderFragment";
     Activity activity;
@@ -106,6 +98,7 @@ public class BookReaderFragment extends Fragment {
 
     final String CHAPTER_KEY = "chapter";
     final String WORD_KEY = "page";
+    final String SENTENCE_START_KEY = "sentence_start";
 
 
     //long held incrementers
@@ -127,9 +120,10 @@ public class BookReaderFragment extends Fragment {
 
         String tempChpt = this.bookDetails.get(CHAPTER_KEY);
         String tempWord = this.bookDetails.get(WORD_KEY);
-
+        String tempSentenceStart = this.bookDetails.get(SENTENCE_START_KEY);
         this.currentChapter = (tempChpt == null ? 0 : Integer.valueOf(tempChpt));
         this.currentWordIdx = (tempWord == null ? 0 : Integer.valueOf(tempWord));
+        this.currSentenceStart = (tempSentenceStart == null ? 0 : Integer.valueOf(tempSentenceStart));
     }
 
     @Override
@@ -138,8 +132,11 @@ public class BookReaderFragment extends Fragment {
         if (book != null) {
             String tempChpt = this.bookDetails.get(CHAPTER_KEY);
             String tempWord = this.bookDetails.get(WORD_KEY);
+            String tempSentenceStart = this.bookDetails.get(SENTENCE_START_KEY);
             this.currentChapter = (tempChpt == null ? 0 : Integer.valueOf(tempChpt));
-//            this.currentWordIdx = (tempWord == null ? 0 : Integer.valueOf(tempWord));
+            this.currentWordIdx = (tempWord == null ? 0 : Integer.valueOf(tempWord));
+            this.currSentenceStart = (tempSentenceStart == null ? 0 : Integer.valueOf(tempSentenceStart));
+            iterateWords();
         }
         super.onResume();
     }
@@ -152,6 +149,7 @@ public class BookReaderFragment extends Fragment {
         }
         bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
         bookDetails.put(WORD_KEY, String.valueOf(currentWordIdx));
+        bookDetails.put(SENTENCE_START_KEY, String.valueOf(currSentenceStart));
         PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
         super.onPause();
     }
@@ -187,7 +185,6 @@ public class BookReaderFragment extends Fragment {
             this.tocResourceIds = getTOCResourceIDs();
             displayTOC();
             readStory();
-            iterateWords();
 
         }
 
@@ -216,8 +213,6 @@ public class BookReaderFragment extends Fragment {
         dropdown.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                // TODO something weird with indexing is going on here i think i just need a completely different way of doing this
-                // choosing chpt 4. Oaths for example takes to 14 but on reopen goes to 15
                 String selectedItem = tocResourceIds.get(position);
                 if (++firstTimeFlag > 1) { // do not update on launch
                     currentChapter = EPubLibUtil.mapTOCToSpine(book, selectedItem);
@@ -247,7 +242,6 @@ public class BookReaderFragment extends Fragment {
         return tocIDs;
     }
 
-
     public Book readFile(String fName) {
         Book book = EPubLibUtil.getBook(fName); // think about how to better structure this
         return book;
@@ -256,7 +250,6 @@ public class BookReaderFragment extends Fragment {
     public void readStory() {
         // sets fullText (String containing entire chapter text)
         // and calculates and sets story(ArrayList of each word in chapter)
-        resetStoryGlobals();
         String chapter = readSampleChapter(book, currentChapter);
         this.fullText = new StringBuilder(chapter);
 
@@ -268,7 +261,6 @@ public class BookReaderFragment extends Fragment {
     }
 
     public int getNextSentencesEndIdx(ArrayList<String> tokens, int numSentences, int startIdx) {
-        // TODO also keep track of where the sentences end for formatting
         int foundSentences = 0;
         while (foundSentences < numSentences) {
             while (startIdx < maxWordIdx &&
@@ -309,11 +301,9 @@ public class BookReaderFragment extends Fragment {
         return displayStrs;
     }
 
-
     public void iterateWords() {
         int tempWordIdx = this.currentWordIdx;
         int sentencesEndIdx = getNextSentencesEndIdx(story, 1, this.currentWordIdx);
-        //TODO something isnt being handled right and it results in a start from 0 on open with the next sentence being where reader left off
         this.displayStrs = buildBoldSentences(this.story, currSentenceStart, sentencesEndIdx);
 //        ArrayList<StringBuilder> formattedStrings = buildBoldSentences(this.story, currSentenceStart, sentencesEndIdx);
 
@@ -349,7 +339,6 @@ public class BookReaderFragment extends Fragment {
                     }
                 });
     }
-
 
     void initTimer() {
         /*
