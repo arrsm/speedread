@@ -1,12 +1,9 @@
 package com.example.oceo.speedread;
 
-import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.text.Html;
 import android.text.Spanned;
@@ -30,8 +27,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.StringTokenizer;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
@@ -51,15 +46,11 @@ public class BookReaderFragment extends Fragment {
 
     /*
     TODO check file permissions
-    write to prefs when app closed or minimized
-    can i count the number of words in file faster? currently converting StringBuilder to String and tokenizing
-    min values for WPM (setting to 0 for example will cause a never ending postdelayed call)
-    show values changing WHILE button held https://stackoverflow.com/questions/12071090/triggering-event-continuously-when-button-is-pressed-down-in-android
+    percentage read of chapter/book
     indication for when reading is happening
     keep track of start and end indexes to have better resume experience
-    reset chapter if keeps failing
-    seek to next sentence
-    seek to next paragraph
+    make spine a dropdown so user can choose section?
+    move all epub related stuff to the epubutil class
     */
 
     String TAG = "BookReaderFragment";
@@ -70,6 +61,7 @@ public class BookReaderFragment extends Fragment {
     Book book;
     private long WPM;
     private long WPM_MS;
+    private long sentenceDelay;
     private int currSentenceStart;
     private int currSentenceIdx;
     private int currentWordIdx; // current word being iterated over
@@ -99,10 +91,15 @@ public class BookReaderFragment extends Fragment {
     final String CHAPTER_KEY = "chapter";
     final String WORD_KEY = "page";
     final String SENTENCE_START_KEY = "sentence_start";
+    final String WPM_KEY = "wpm";
+    final String SENTENCE_DELAY_KEY = "sentence_delay";
 
 
     //long held incrementers
-    Timer fixedTimer = new Timer();
+    private boolean autoIncrementWPM = false;
+    private boolean autoDecrementWPM = false;
+    private final long REPEAT_DELAY = 50;
+    private Handler WPMUpdateHandler = new Handler();
 
 
     @Override
@@ -113,17 +110,7 @@ public class BookReaderFragment extends Fragment {
         Bundle bundle = this.getArguments();
         this.chosenFilePath = bundle.getString("file_path");
         this.chosenFileName = SpeedReadUtilities.bookNameFromPath(this.chosenFilePath);
-        this.bookDetails = PrefsUtil.readBookDetailsFromPrefs(activity, chosenFileName);
-        if (this.bookDetails == null) {
-            this.bookDetails = new HashMap<String, String>();
-        }
-
-        String tempChpt = this.bookDetails.get(CHAPTER_KEY);
-        String tempWord = this.bookDetails.get(WORD_KEY);
-        String tempSentenceStart = this.bookDetails.get(SENTENCE_START_KEY);
-        this.currentChapter = (tempChpt == null ? 0 : Integer.valueOf(tempChpt));
-        this.currentWordIdx = (tempWord == null ? 0 : Integer.valueOf(tempWord));
-        this.currSentenceStart = (tempSentenceStart == null ? 0 : Integer.valueOf(tempSentenceStart));
+        setDefaultValues();
     }
 
     @Override
@@ -136,7 +123,9 @@ public class BookReaderFragment extends Fragment {
             this.currentChapter = (tempChpt == null ? 0 : Integer.valueOf(tempChpt));
             this.currentWordIdx = (tempWord == null ? 0 : Integer.valueOf(tempWord));
             this.currSentenceStart = (tempSentenceStart == null ? 0 : Integer.valueOf(tempSentenceStart));
-            iterateWords();
+            if (firstTimeFlag == 0) {
+                iterateWords();
+            }
         }
         super.onResume();
     }
@@ -154,14 +143,12 @@ public class BookReaderFragment extends Fragment {
         super.onPause();
     }
 
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         Log.d(TAG, "onCreateView");
         rootView = inflater.inflate(R.layout.book_reader, container, false);
 
         this.book = readFile(this.chosenFilePath);
-        setDefaultValues();
         setupWPMControls();
         setupChapterControls(this.book);
 
@@ -185,11 +172,17 @@ public class BookReaderFragment extends Fragment {
             this.tocResourceIds = getTOCResourceIDs();
             displayTOC();
             readStory();
-
         }
 
         return rootView;
 
+    }
+
+    public void scrollSentences(int numSentences) {
+        //TODO testing
+        // average number of sentences in a page for page turn?
+        int startIdx = getNextSentencesEndIdx(this.story, numSentences, currentWordIdx);
+        this.currSentenceStart = startIdx + 1;
     }
 
     public void displayTOC() {
@@ -222,7 +215,7 @@ public class BookReaderFragment extends Fragment {
                     bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
                     PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
                     currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
-                    resetStoryGlobals();
+                    resetChapterGlobals();
                     readStory();
                     iterateWords();
                 }
@@ -309,11 +302,11 @@ public class BookReaderFragment extends Fragment {
 
         Observable rangeObs = Observable.range(tempWordIdx, sentencesEndIdx - currentWordIdx);
         rangeObs = rangeObs.concatMap(i -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS));
-        rangeObs = rangeObs.delay(400, TimeUnit.MILLISECONDS); // delay at the end of the sentence
+        rangeObs = rangeObs.delay(this.sentenceDelay, TimeUnit.MILLISECONDS); // delay at the end of the sentence
         rangeObs = rangeObs.observeOn(AndroidSchedulers.mainThread());
 
         disposableReader = rangeObs.subscribe(wordIdx -> {
-                    Log.d("The OBS", String.valueOf(wordIdx) + " / " + String.valueOf(sentencesEndIdx));
+//                    Log.d("The OBS", String.valueOf(wordIdx) + " / " + String.valueOf(sentencesEndIdx));
                     if (this.currSentenceIdx < this.displayStrs.size()) {
 
                         currentChunkView.setText(Html.fromHtml(this.displayStrs.get(this.currSentenceIdx).toString()));
@@ -340,13 +333,6 @@ public class BookReaderFragment extends Fragment {
                 });
     }
 
-    void initTimer() {
-        /*
-            timer currently used for: long-pressing wpm inc/dec
-         */
-        fixedTimer = new Timer();
-    }
-
     public void setupChapterControls(Book book) {
 
         raiseChapterButton = rootView.findViewById(R.id.raise_chpt_button);
@@ -364,7 +350,7 @@ public class BookReaderFragment extends Fragment {
                     bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
                     PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
                     currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
-                    resetStoryGlobals();
+                    resetChapterGlobals();
                     readStory();
                     iterateWords();
                 }
@@ -385,7 +371,7 @@ public class BookReaderFragment extends Fragment {
                         if (disposableReader != null && !disposableReader.isDisposed()) {
                             disposableReader.dispose();
                         }
-                        resetStoryGlobals();
+                        resetChapterGlobals();
                         readStory();
                         iterateWords();
                     }
@@ -397,84 +383,27 @@ public class BookReaderFragment extends Fragment {
 
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    public void setupWPMControls() {
-        raiseWPMButton = rootView.findViewById(R.id.raise_wpm_button);
-        lowerWPMButton = rootView.findViewById(R.id.lower_wpm_button);
-        WPM_view = rootView.findViewById(R.id.current_wpm_view);
-
-
-        raiseWPMButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                WPM += 1;
-                WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
-                WPM_view.setText(String.valueOf(WPM));
-            }
-        });
-
-
-        raiseWPMButton.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    fixedTimer.scheduleAtFixedRate(new TimerTask() {
-                        @Override
-                        public void run() {
-                            WPM += 5;
-                        }
-                    }, 500, 50);
-                } else if (event.getAction() == MotionEvent.ACTION_UP) {
-                    fixedTimer.cancel();
-                    initTimer();
-                    WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
-                }
-                return false;
-            }
-        });
-
-
-        lowerWPMButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                WPM -= 1;
-                WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
-                WPM_view.setText(String.valueOf(WPM));
-            }
-        });
-
-        lowerWPMButton.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    fixedTimer.scheduleAtFixedRate(new TimerTask() {
-                        @Override
-                        public void run() {
-                            WPM -= 5;
-                        }
-                    }, 500, 50);
-                    WPM_view.setText(String.valueOf(WPM));
-                } else if (event.getAction() == MotionEvent.ACTION_UP) {
-                    fixedTimer.cancel();
-                    initTimer();
-                }
-
-                return false;
-            }
-        });
-
-        WPM_view.setText(String.valueOf(WPM));
-
-    }
-
-    public void resetStoryGlobals() {
+    public void resetChapterGlobals() {
         currSentenceStart = 0;
         currentWordIdx = 0;
         currSentenceIdx = 0;
     }
 
     public void setDefaultValues() {
-        WPM = 230;
-        WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
-        resetStoryGlobals();
+        this.WPM = PrefsUtil.readLongFromPrefs(activity, WPM_KEY);
+        this.WPM_MS = SpeedReadUtilities.WPMtoMS(WPM);
+        this.sentenceDelay = PrefsUtil.readLongFromPrefs(activity, SENTENCE_DELAY_KEY);
+        this.bookDetails = PrefsUtil.readBookDetailsFromPrefs(activity, chosenFileName);
+        if (this.bookDetails == null) {
+            this.bookDetails = new HashMap<String, String>();
+        }
+        String tempChpt = this.bookDetails.get(CHAPTER_KEY);
+        String tempWord = this.bookDetails.get(WORD_KEY);
+        String tempSentenceStart = this.bookDetails.get(SENTENCE_START_KEY);
+        this.currentChapter = (tempChpt == null ? 0 : Integer.valueOf(tempChpt));
+        this.currentWordIdx = (tempWord == null ? 0 : Integer.valueOf(tempWord));
+        this.currSentenceStart = (tempSentenceStart == null ? 0 : Integer.valueOf(tempSentenceStart));
+        resetChapterGlobals();
     }
 
     public static StringTokenizer getWordTokens(String words) {
@@ -569,4 +498,106 @@ public class BookReaderFragment extends Fragment {
     }
 
 
+    @SuppressLint("ClickableViewAccessibility")
+    public void setupWPMControls() {
+        raiseWPMButton = rootView.findViewById(R.id.raise_wpm_button);
+        lowerWPMButton = rootView.findViewById(R.id.lower_wpm_button);
+        WPM_view = rootView.findViewById(R.id.current_wpm_view);
+        WPM_view.setText(String.valueOf(WPM));
+
+
+        raiseWPMButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+//                Log.d(TAG, "onClick");
+                incrementWPM();
+                // TODO necessary to do here AND in motion up?
+                PrefsUtil.writeLongToPrefs(activity, WPM_KEY, WPM);
+            }
+        });
+
+        raiseWPMButton.setOnLongClickListener(new View.OnLongClickListener() {
+
+            @Override
+            public boolean onLongClick(View v) {
+//                Log.d(TAG, "long click");
+                autoIncrementWPM = true;
+                WPMUpdateHandler.post(new RepetitiveUpdater());
+                return false;
+            }
+        });
+
+        raiseWPMButton.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+
+                if (event.getAction() == MotionEvent.ACTION_UP && autoIncrementWPM) {
+                    Log.d(TAG, "touch up");
+                    autoIncrementWPM = false;
+                    PrefsUtil.writeLongToPrefs(activity, WPM_KEY, WPM);
+
+                }
+                return false;
+            }
+        });
+
+
+        lowerWPMButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+//                Log.d(TAG, "onClick");
+                decrementWPM();
+            }
+        });
+
+        lowerWPMButton.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+//                Log.d(TAG, "long click");
+                autoDecrementWPM = true;
+                WPMUpdateHandler.post(new RepetitiveUpdater());
+                return false;
+            }
+        });
+
+        lowerWPMButton.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+
+                if (event.getAction() == MotionEvent.ACTION_UP && autoDecrementWPM) {
+//                    Log.d(TAG, "touch up");
+                    autoDecrementWPM = false;
+                }
+                return false;
+            }
+        });
+    }
+
+    public void incrementWPM() {
+        if (WPM < 1000) {
+            WPM++;
+            WPM_view.setText(String.valueOf(WPM));
+        }
+    }
+
+    public void decrementWPM() {
+        if (WPM > 0) {
+            WPM--;
+            WPM_view.setText(String.valueOf(WPM));
+        }
+    }
+
+    /* used to update WPM values while button held */
+    class RepetitiveUpdater implements Runnable {
+        @Override
+        public void run() {
+            if (autoIncrementWPM) {
+                incrementWPM();
+                WPMUpdateHandler.postDelayed(new RepetitiveUpdater(), REPEAT_DELAY);
+            } else if (autoDecrementWPM) {
+                decrementWPM();
+                WPMUpdateHandler.postDelayed(new RepetitiveUpdater(), REPEAT_DELAY);
+            }
+        }
+    }
 }
