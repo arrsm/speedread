@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "691146917239",
+    "firebase_url": "https://speedyepub.firebaseio.com",
+    "project_id": "speedyepub",
+    "storage_bucket": "speedyepub.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:691146917239:android:7ea901a50909b417c38d72",
+        "android_client_info": {
+          "package_name": "com.example.oceo.speedread"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "691146917239-4rirbk178do7p8dvulkf47a4lj8vgpr1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzKSfuXAw7HvKwahqX-H7AmazVJl64eTc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "691146917239-4rirbk178do7p8dvulkf47a4lj8vgpr1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
