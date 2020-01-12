@@ -58,6 +58,7 @@
         android:paddingTop="30dp"
         android:paddingBottom="70dp"
         android:textColor="@android:color/white"
+        android:textIsSelectable="true"
         android:textSize="20sp" />
 
     <TextView
@@ -103,6 +104,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text=" + " />
+
+
+        <Button
+            android:id="@+id/pause_resume"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=" || " />
 
 
     </LinearLayout>

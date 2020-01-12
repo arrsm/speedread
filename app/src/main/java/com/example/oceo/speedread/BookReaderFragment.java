@@ -2,6 +2,7 @@ package com.example.oceo.speedread;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 
@@ -11,6 +12,7 @@ import android.text.Html;
 import android.text.Spanned;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
+import android.view.ActionMode;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -48,16 +50,21 @@ import static com.example.oceo.speedread.EPubLibUtil.mapSpineToTOC;
 public class BookReaderFragment extends Fragment {
 
     /*
-    TODO check file permissions
+    is the span method used in cTextSelect callback better than my sentence generations?
     percentage read of chapter/book
     indication for when reading is happening
     keep track of start and end indexes to have better resume experience
     make spine a dropdown so user can choose section?
     move all epub related stuff to the epubutil class
     move seekbar styling and stuff to a new xml file
-    handle quotes - right now a period before a quote means the closing quote starts on the next sentence chunk
     programmable night/bright modes
     set scrolling sentences based on finger swipes - test how fast android can build bold sentences
+    auto scroll to next section
+    show images in epub
+    file importer
+    bookmarks and notes
+    settings menu
+        hide progress /slider
     */
 
     String TAG = "BookReaderFragment";
@@ -74,6 +81,8 @@ public class BookReaderFragment extends Fragment {
     private int currentWordIdx; // current word being iterated over
     private int maxWordIdx; // last word in chapter
     private int currentChapter;
+    private int mTouchX;
+    private int mTouchY;
     int firstTimeFlag = 0; // should spinner action be called
     private float chptPercentageComplete;
     protected StringBuilder fullText; // holds full story in memory
@@ -97,6 +106,7 @@ public class BookReaderFragment extends Fragment {
     private Spinner dropdown;
     private SeekBar chapterSeekBar;
     private TextView chptProgressView;
+    private Button pauseResumeBtn;
 
     final String CHAPTER_KEY = "chapter";
     final String WORD_KEY = "page";
@@ -121,6 +131,14 @@ public class BookReaderFragment extends Fragment {
         this.chosenFilePath = bundle.getString("file_path");
         this.chosenFileName = SpeedReadUtilities.bookNameFromPath(this.chosenFilePath);
         setDefaultValues();
+
+
+        CharSequence text = activity.getIntent().getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT);
+        if (!(text == null)) {
+            Log.d("play with text", text.toString());
+
+            // process the text
+        }
     }
 
     @Override
@@ -153,6 +171,22 @@ public class BookReaderFragment extends Fragment {
         super.onPause();
     }
 
+    /*
+    text selection
+    */
+    private void handleTextSelection() {
+        if (currentChunkView == null) {
+            return;
+        }
+
+        if (currentChunkView.hasSelection()) {
+            mTouchX = currentChunkView.getSelectionStart();
+            mTouchY = currentChunkView.getSelectionEnd();
+//            currentChunkView.menu
+        }
+        Log.d("text selection", "(" + String.valueOf(mTouchX) + ", " + String.valueOf(mTouchY) + ")");
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         Log.d(TAG, "onCreateView");
@@ -164,6 +198,7 @@ public class BookReaderFragment extends Fragment {
 
 
         currentChunkView = rootView.findViewById(R.id.current_chunk);
+        /*
         currentChunkView.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (!disposableReader.isDisposed()) {
@@ -174,6 +209,32 @@ public class BookReaderFragment extends Fragment {
 
             }
         });
+        */
+        currentChunkView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (MotionEvent.ACTION_UP == event.getAction()) {
+                    handleTextSelection();
+                }
+                return false;
+            }
+        });
+
+        pauseResumeBtn = rootView.findViewById(R.id.pause_resume);
+        pauseResumeBtn.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if (!disposableReader.isDisposed()) {
+                    pauseResumeBtn.setText(">");
+                    disposableReader.dispose();
+                } else {
+                    pauseResumeBtn.setText("||");
+                    iterateWords();
+                }
+            }
+        });
+
+        cTextSelectionMenu newMenu = new cTextSelectionMenu(currentChunkView);
+        currentChunkView.setCustomSelectionActionModeCallback(newMenu);
         currentWordView = rootView.findViewById(R.id.current_word);
         fullStoryView = rootView.findViewById(R.id.file_test);
         chapterSeekBar = rootView.findViewById(R.id.seekBar);
@@ -184,7 +245,7 @@ public class BookReaderFragment extends Fragment {
             PrefsUtil.writeBookToPrefs(activity, this.chosenFilePath);
             this.tocResourceIds = getTOCResourceIDs();
             displayTOC();
-            readStory();
+            setStoryTokens();
         }
 
         chapterSeekBar.setMax(this.maxWordIdx);
@@ -216,9 +277,10 @@ public class BookReaderFragment extends Fragment {
             public void onStopTrackingTouch(SeekBar seekBar) {
 //                Log.d(TAG, "seekBar stop tracking touch");
                 int progress = seekBar.getProgress();
-                currentWordIdx = progress;
-                currSentenceIdx = 0; // TODO find a better way to handle this too i guess
-                currSentenceStart = progress; // TODO find a way to work backward to get first word in sentence from position
+                currSentenceStart = getSentenceStartIdx(progress);
+                currentWordIdx = currSentenceStart;
+//                currSentenceIdx = getWordPositionInSentence(progress);
+                currSentenceIdx = 0;
                 if (String.valueOf(chptPercentageComplete).length() > 3) {
                     chptProgressView.setText(String.valueOf(chptPercentageComplete).substring(0, 4) + "%");
                 } else {
@@ -227,9 +289,7 @@ public class BookReaderFragment extends Fragment {
                 iterateWords();
             }
         });
-
         return rootView;
-
     }
 
     public void scrollSentences(int numSentences) {
@@ -270,7 +330,7 @@ public class BookReaderFragment extends Fragment {
                     PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
                     currentChapterview.setText("Section: " + String.valueOf(currentChapter + 1));
                     resetChapterGlobals();
-                    readStory();
+                    setStoryTokens();
                     iterateWords();
                 }
             }
@@ -280,7 +340,6 @@ public class BookReaderFragment extends Fragment {
 
             }
         });
-
     }
 
     public ArrayList<String> getTOCResourceIDs() {
@@ -294,12 +353,11 @@ public class BookReaderFragment extends Fragment {
         return book;
     }
 
-    public void readStory() {
+    public void setStoryTokens() {
         // sets fullText (String containing entire chapter text)
         // and calculates and sets story(ArrayList of each word in chapter)
         String chapter = readSampleChapter(book, currentChapter);
         this.fullText = new StringBuilder(chapter);
-
         StringTokenizer tokens = getWordTokens(fullText.toString());
         if (tokens != null) {
             this.maxWordIdx = tokens.countTokens();
@@ -307,18 +365,41 @@ public class BookReaderFragment extends Fragment {
         }
     }
 
+    public int getSentenceStartIdx(int idx) {
+        while (!this.story.get(idx).contains(".") && idx > 0) {
+            idx -= 1;
+        }
+        return idx + 1;
+    }
+
+    public int getWordPositionInSentence(int idx) {
+        int earlierTokenCount = 0;
+        while (!this.story.get(idx).contains(".") && idx > 0) {
+            idx -= 1;
+            earlierTokenCount += 1;
+        }
+        return (earlierTokenCount -= 1);
+    }
+
     public int getNextSentencesEndIdx(ArrayList<String> tokens, int numSentences, int startIdx) {
         int foundSentences = 0;
+        int temp = startIdx;
         while (foundSentences < numSentences) {
-            while (startIdx < maxWordIdx &&
-                    (!tokens.get(startIdx).contains(".")
-                            || tokens.get(startIdx).contains("?")
-                            || tokens.get(startIdx).contains("!"))) {
+            while (startIdx < maxWordIdx && (!tokens.get(startIdx).contains(".")
+                    || tokens.get(startIdx).contains("?")
+                    || tokens.get(startIdx).contains("!"))) {
                 startIdx++;
             }
             startIdx += 1;
             foundSentences += 1;
         }
+
+        if (startIdx < tokens.size() && tokens.get(startIdx).contains("”")) {
+            startIdx += 1;
+        }
+
+        List<String> words = tokens.subList(temp, startIdx);
+//        Log.d("the tokes", words.toString());
         return startIdx;
     }
 
@@ -414,7 +495,7 @@ public class BookReaderFragment extends Fragment {
                     PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
                     currentChapterview.setText("Section: " + String.valueOf(currentChapter + 1));
                     resetChapterGlobals();
-                    readStory();
+                    setStoryTokens();
                     iterateWords();
                 }
             }
@@ -435,7 +516,7 @@ public class BookReaderFragment extends Fragment {
                             disposableReader.dispose();
                         }
                         resetChapterGlobals();
-                        readStory();
+                        setStoryTokens();
                         iterateWords();
                     }
                 }
