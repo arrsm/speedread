@@ -3,6 +3,7 @@ package com.example.oceo.speedread;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 
@@ -12,7 +13,6 @@ import android.text.Html;
 import android.text.Spanned;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
-import android.view.ActionMode;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -20,6 +20,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -65,6 +66,8 @@ public class BookReaderFragment extends Fragment {
     bookmarks and notes
     settings menu
         hide progress /slider
+
+    https://www.programcreek.com/java-api-examples/?api=nl.siegmann.epublib.domain.SpineReference
     */
 
     String TAG = "BookReaderFragment";
@@ -120,6 +123,7 @@ public class BookReaderFragment extends Fragment {
     private boolean autoDecrementWPM = false;
     private final long REPEAT_DELAY = 50;
     private Handler WPMUpdateHandler = new Handler();
+    cTextSelectionMenu textSelectionMenu;
 
 
     @Override
@@ -180,9 +184,8 @@ public class BookReaderFragment extends Fragment {
         }
 
         if (currentChunkView.hasSelection()) {
-            mTouchX = currentChunkView.getSelectionStart();
-            mTouchY = currentChunkView.getSelectionEnd();
-//            currentChunkView.menu
+            textSelectionMenu.setMetadata(this.chosenFileName, this.currentChapter, this.currSentenceStart);
+            currentChunkView.setCustomSelectionActionModeCallback(textSelectionMenu);
         }
         Log.d("text selection", "(" + String.valueOf(mTouchX) + ", " + String.valueOf(mTouchY) + ")");
     }
@@ -233,8 +236,7 @@ public class BookReaderFragment extends Fragment {
             }
         });
 
-        cTextSelectionMenu newMenu = new cTextSelectionMenu(currentChunkView);
-        currentChunkView.setCustomSelectionActionModeCallback(newMenu);
+        textSelectionMenu = new cTextSelectionMenu(currentChunkView);
         currentWordView = rootView.findViewById(R.id.current_word);
         fullStoryView = rootView.findViewById(R.id.file_test);
         chapterSeekBar = rootView.findViewById(R.id.seekBar);
@@ -297,6 +299,13 @@ public class BookReaderFragment extends Fragment {
         // average number of sentences in a page for page turn?
         int startIdx = getNextSentencesEndIdx(this.story, numSentences, currentWordIdx);
         this.currSentenceStart = startIdx + 1;
+    }
+
+    private Bitmap getBookImages(List<Resource> res, String imgHref) {
+        String tempHref = "images/Simm_9780307781888_epub_L03_r1.jpg";
+        tempHref = "OEBPS/images/Simm_9780307781888_epub_L03_r1.jpg";
+//        tempHref = "images/OB_ARCH_ebook_004.gif.transcoded1535572045.png" // WORKS sanderson chapt 4;
+        return EPubLibUtil.getBitmapFromResources(res, tempHref, this.book);
     }
 
     public void displayTOC() {
@@ -398,7 +407,7 @@ public class BookReaderFragment extends Fragment {
             startIdx += 1;
         }
 
-        List<String> words = tokens.subList(temp, startIdx);
+//        List<String> words = tokens.subList(temp, startIdx);
 //        Log.d("the tokes", words.toString());
         return startIdx;
     }
@@ -632,6 +641,16 @@ public class BookReaderFragment extends Fragment {
                 || ((line.contains("/*")) && line.contains("*/"))
                 || (line.contains("<!--") && line.contains("-->"))) {
             line = line.substring(line.length());
+        }
+
+        if (line.contains("<img")) {
+//            Log.d("checking image files", line.toString());
+//            List<Resource> phList = new ArrayList<Resource>();
+//            Bitmap bm = getBookImages(phList, "temp");
+//            Log.d("more test", bm.toString());
+//            ImageView im = rootView.findViewById(R.id.image1);
+//            im.setImageBitmap(bm);
+//            Log.d("image set", "image set");
         }
         return line;
     }

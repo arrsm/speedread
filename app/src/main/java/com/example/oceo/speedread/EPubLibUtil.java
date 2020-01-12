@@ -1,5 +1,7 @@
 package com.example.oceo.speedread;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -12,6 +14,7 @@ import java.util.List;
 
 import nl.siegmann.epublib.domain.Book;
 import nl.siegmann.epublib.domain.Guide;
+import nl.siegmann.epublib.domain.MediaType;
 import nl.siegmann.epublib.domain.Resource;
 import nl.siegmann.epublib.domain.Resources;
 import nl.siegmann.epublib.domain.Spine;
@@ -19,9 +22,11 @@ import nl.siegmann.epublib.domain.SpineReference;
 import nl.siegmann.epublib.domain.TOCReference;
 import nl.siegmann.epublib.domain.TableOfContents;
 import nl.siegmann.epublib.epub.EpubReader;
+import nl.siegmann.epublib.service.MediatypeService;
 
 public class EPubLibUtil {
     private String testBook1Path = "storage/emulated/0/Books/MoonReader/Brandon Sanderson - Oathbringer_ Book Three of the Stormlight Archive-Tor Books (2017).epub";
+    static MediaType[] bitmapTypes = {MediatypeService.PNG, MediatypeService.GIF, MediatypeService.JPG};
 
 
     public static Book getBook(String fName) {
@@ -40,6 +45,31 @@ public class EPubLibUtil {
             e.printStackTrace();
         }
         return book;
+    }
+
+    /*
+       trying to display images
+    */
+    public static Bitmap getBitmapFromResources(List<Resource> resourcez, String imgHref, Book book) {
+        List<Resource> resources = book.getResources().getResourcesByMediaTypes(bitmapTypes);
+        byte[] data = "holder".getBytes();
+        for (int ii = 0; ii < resources.size(); ii++) {
+            String z = resources.get(ii).getHref();
+            Log.d("the href: ", z);
+            if (z.equals(imgHref)) {
+                Log.i("livi", z);
+                try {
+                    data = resources.get(ii).getData();
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                break;
+            }
+        }
+        //
+        Bitmap bm = BitmapFactory.decodeByteArray(data, 0, data.length);
+        return bm;
     }
 
 
@@ -171,5 +201,6 @@ public class EPubLibUtil {
         }
         return title;
     }
+
 
 }
