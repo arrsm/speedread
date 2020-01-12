@@ -4,7 +4,9 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Handler;
+
 import androidx.fragment.app.Fragment;
+
 import android.text.Html;
 import android.text.Spanned;
 import android.text.method.ScrollingMovementMethod;
@@ -16,6 +18,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -51,6 +54,10 @@ public class BookReaderFragment extends Fragment {
     keep track of start and end indexes to have better resume experience
     make spine a dropdown so user can choose section?
     move all epub related stuff to the epubutil class
+    move seekbar styling and stuff to a new xml file
+    handle quotes - right now a period before a quote means the closing quote starts on the next sentence chunk
+    programmable night/bright modes
+    set scrolling sentences based on finger swipes - test how fast android can build bold sentences
     */
 
     String TAG = "BookReaderFragment";
@@ -68,6 +75,7 @@ public class BookReaderFragment extends Fragment {
     private int maxWordIdx; // last word in chapter
     private int currentChapter;
     int firstTimeFlag = 0; // should spinner action be called
+    private float chptPercentageComplete;
     protected StringBuilder fullText; // holds full story in memory
     private ArrayList<String> story; // fullText converted to arraylist
     private ArrayList<StringBuilder> displayStrs; // crutch to display bolded words. would like to change
@@ -87,6 +95,8 @@ public class BookReaderFragment extends Fragment {
     private Button lowerChapterButton;
     private TextView WPM_view;
     private Spinner dropdown;
+    private SeekBar chapterSeekBar;
+    private TextView chptProgressView;
 
     final String CHAPTER_KEY = "chapter";
     final String WORD_KEY = "page";
@@ -166,6 +176,9 @@ public class BookReaderFragment extends Fragment {
         });
         currentWordView = rootView.findViewById(R.id.current_word);
         fullStoryView = rootView.findViewById(R.id.file_test);
+        chapterSeekBar = rootView.findViewById(R.id.seekBar);
+        chptProgressView = rootView.findViewById(R.id.chapter_progress_view);
+
 
         if (this.book != null) {
             PrefsUtil.writeBookToPrefs(activity, this.chosenFilePath);
@@ -173,6 +186,47 @@ public class BookReaderFragment extends Fragment {
             displayTOC();
             readStory();
         }
+
+        chapterSeekBar.setMax(this.maxWordIdx);
+        chapterSeekBar.setMin(0);
+        chapterSeekBar.setProgress(this.currentWordIdx);
+
+        chptPercentageComplete = Float.valueOf(currentWordIdx) / Float.valueOf(maxWordIdx) * 100;
+        if (String.valueOf(chptPercentageComplete).length() > 3) {
+            chptProgressView.setText(String.valueOf(chptPercentageComplete).substring(0, 4) + "%");
+        } else {
+            chptProgressView.setText(String.valueOf(chptPercentageComplete) + "%");
+        }
+
+        chapterSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+//                Log.d("seeking: ", String.valueOf(progress));
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+//                Log.d(TAG, "seekBar start tracking touch");
+                if (disposableReader != null && !disposableReader.isDisposed()) {
+                    disposableReader.dispose();
+                }
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+//                Log.d(TAG, "seekBar stop tracking touch");
+                int progress = seekBar.getProgress();
+                currentWordIdx = progress;
+                currSentenceIdx = 0; // TODO find a better way to handle this too i guess
+                currSentenceStart = progress; // TODO find a way to work backward to get first word in sentence from position
+                if (String.valueOf(chptPercentageComplete).length() > 3) {
+                    chptProgressView.setText(String.valueOf(chptPercentageComplete).substring(0, 4) + "%");
+                } else {
+                    chptProgressView.setText(String.valueOf(chptPercentageComplete) + "%");
+                }
+                iterateWords();
+            }
+        });
 
         return rootView;
 
@@ -214,7 +268,7 @@ public class BookReaderFragment extends Fragment {
                     }
                     bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
                     PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
-                    currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
+                    currentChapterview.setText("Section: " + String.valueOf(currentChapter + 1));
                     resetChapterGlobals();
                     readStory();
                     iterateWords();
@@ -298,7 +352,6 @@ public class BookReaderFragment extends Fragment {
         int tempWordIdx = this.currentWordIdx;
         int sentencesEndIdx = getNextSentencesEndIdx(story, 1, this.currentWordIdx);
         this.displayStrs = buildBoldSentences(this.story, currSentenceStart, sentencesEndIdx);
-//        ArrayList<StringBuilder> formattedStrings = buildBoldSentences(this.story, currSentenceStart, sentencesEndIdx);
 
         Observable rangeObs = Observable.range(tempWordIdx, sentencesEndIdx - currentWordIdx);
         rangeObs = rangeObs.concatMap(i -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS));
@@ -313,8 +366,18 @@ public class BookReaderFragment extends Fragment {
                         this.currentWordView.setText(this.story.get(this.currentWordIdx));
                         this.currSentenceIdx++;
                         this.currentWordIdx++;
+                        this.chptPercentageComplete = Float.valueOf(this.currentWordIdx) / Float.valueOf(this.maxWordIdx) * 100;
+                        if (String.valueOf(chptPercentageComplete).length() > 3) {
+                            chptProgressView.setText(String.valueOf(chptPercentageComplete).substring(0, 4) + "%");
+                        } else {
+                            chptProgressView.setText(String.valueOf(chptPercentageComplete) + "%");
+                        }
+                        chapterSeekBar.setProgress(currentWordIdx);
+//                        Log.d("setting progress to ", String.valueOf(currentWordIdx));
+//                        Log.d(TAG + "SUB", String.valueOf(wordIdx) + " / " + String.valueOf(this.maxWordIdx));
                     } else {
                         Log.d("The OBS", "Is Out of Bounds");
+                        Log.d(TAG, String.valueOf(this.currentWordIdx) + " / " + String.valueOf(this.displayStrs.size()));
                     }
 
                 },
@@ -349,7 +412,7 @@ public class BookReaderFragment extends Fragment {
                     }
                     bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
                     PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
-                    currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
+                    currentChapterview.setText("Section: " + String.valueOf(currentChapter + 1));
                     resetChapterGlobals();
                     readStory();
                     iterateWords();
@@ -367,7 +430,7 @@ public class BookReaderFragment extends Fragment {
 
                         bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
                         PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
-                        currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
+                        currentChapterview.setText("Section: " + String.valueOf(currentChapter + 1));
                         if (disposableReader != null && !disposableReader.isDisposed()) {
                             disposableReader.dispose();
                         }
@@ -379,7 +442,7 @@ public class BookReaderFragment extends Fragment {
             }
         });
 
-        currentChapterview.setText("Chapter: " + String.valueOf(currentChapter + 1));
+        currentChapterview.setText("Section: " + String.valueOf(currentChapter + 1));
 
     }
 
