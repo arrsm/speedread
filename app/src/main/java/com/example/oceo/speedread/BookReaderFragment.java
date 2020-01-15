@@ -302,10 +302,10 @@ public class BookReaderFragment extends Fragment {
     }
 
     private Bitmap getBookImages(List<Resource> res, String imgHref) {
-        String tempHref = "images/Simm_9780307781888_epub_L03_r1.jpg";
-        tempHref = "OEBPS/images/Simm_9780307781888_epub_L03_r1.jpg";
+//        String tempHref = "images/Simm_9780307781888_epub_L03_r1.jpg";
+//        tempHref = "OEBPS/images/Simm_9780307781888_epub_L03_r1.jpg";
 //        tempHref = "images/OB_ARCH_ebook_004.gif.transcoded1535572045.png" // WORKS sanderson chapt 4;
-        return EPubLibUtil.getBitmapFromResources(res, tempHref, this.book);
+        return EPubLibUtil.getBitmapFromResources(res, imgHref, this.book);
     }
 
     public void displayTOC() {
@@ -403,7 +403,7 @@ public class BookReaderFragment extends Fragment {
             foundSentences += 1;
         }
 
-        if (startIdx < tokens.size() && tokens.get(startIdx).contains("”")) {
+        if (tokens != null && startIdx < tokens.size() && tokens.get(startIdx).contains("”")) {
             startIdx += 1;
         }
 
@@ -644,12 +644,16 @@ public class BookReaderFragment extends Fragment {
         }
 
         if (line.contains("<img")) {
+            String src = line.substring(line.indexOf("src=\"") + 5);
+            src = src.substring(0, src.indexOf("\""));
 //            Log.d("checking image files", line.toString());
-//            List<Resource> phList = new ArrayList<Resource>();
-//            Bitmap bm = getBookImages(phList, "temp");
+//            Log.d("against", src.toString());
+//            Log.d("checking image files", line.toString());
+            List<Resource> phList = new ArrayList<Resource>();
+            Bitmap bm = getBookImages(phList, src);
 //            Log.d("more test", bm.toString());
-//            ImageView im = rootView.findViewById(R.id.image1);
-//            im.setImageBitmap(bm);
+            ImageView im = rootView.findViewById(R.id.image1);
+            im.setImageBitmap(bm);
 //            Log.d("image set", "image set");
         }
         return line;
