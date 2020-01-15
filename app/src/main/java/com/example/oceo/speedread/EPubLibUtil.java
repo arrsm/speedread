@@ -55,10 +55,14 @@ public class EPubLibUtil {
         byte[] data = "holder".getBytes();
         for (int ii = 0; ii < resources.size(); ii++) {
             String z = resources.get(ii).getHref();
-//            Log.d("given: ", imgHref);
-//            Log.d("the href: ", z);
-//            Log.d("contains", String.valueOf(imgHref.contains(z)));
-            if (imgHref.contains(z)) {
+            Log.d("given: ", imgHref);
+            Log.d("the href: ", z);
+            Log.d("contains", String.valueOf(imgHref.contains(z)));
+            Log.d("contains", String.valueOf(z.contains(imgHref)));
+            // it isnt clear which one will be larger
+            // oathbringer chpt 4 is an example of the first condition
+            // hyperian prologue is an example of seocnd
+            if (imgHref.contains(z) || z.contains(imgHref)) {
 //                Log.i("livi", z);
                 try {
                     data = resources.get(ii).getData();
