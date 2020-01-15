@@ -55,9 +55,11 @@ public class EPubLibUtil {
         byte[] data = "holder".getBytes();
         for (int ii = 0; ii < resources.size(); ii++) {
             String z = resources.get(ii).getHref();
-            Log.d("the href: ", z);
-            if (z.equals(imgHref)) {
-                Log.i("livi", z);
+//            Log.d("given: ", imgHref);
+//            Log.d("the href: ", z);
+//            Log.d("contains", String.valueOf(imgHref.contains(z)));
+            if (imgHref.contains(z)) {
+//                Log.i("livi", z);
                 try {
                     data = resources.get(ii).getData();
                 } catch (IOException e) {
