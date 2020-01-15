@@ -646,12 +646,11 @@ public class BookReaderFragment extends Fragment {
         if (line.contains("<img")) {
             String src = line.substring(line.indexOf("src=\"") + 5);
             src = src.substring(0, src.indexOf("\""));
-//            Log.d("checking image files", line.toString());
+            Log.d("checking image files", line.toString());
 //            Log.d("against", src.toString());
-//            Log.d("checking image files", line.toString());
             List<Resource> phList = new ArrayList<Resource>();
             Bitmap bm = getBookImages(phList, src);
-//            Log.d("more test", bm.toString());
+            Log.d("more test", bm.toString());
             ImageView im = rootView.findViewById(R.id.image1);
             im.setImageBitmap(bm);
 //            Log.d("image set", "image set");
