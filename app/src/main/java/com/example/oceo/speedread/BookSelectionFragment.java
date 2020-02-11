@@ -6,7 +6,11 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
+
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -30,6 +34,10 @@ public class BookSelectionFragment extends Fragment {
     Button fileChooseButton;
     String filePath;
 
+    private RecyclerView recyclerView;
+    private RecyclerView.Adapter mAdapter;
+    private RecyclerView.LayoutManager layoutManager;
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -45,12 +53,25 @@ public class BookSelectionFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         rootView = inflater.inflate(R.layout.book_selection, container, false);
 
-        bookListView = rootView.findViewById(R.id.book_list);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, displayList);
-        bookListView.setAdapter(adapter);
+//        bookListView = rootView.findViewById(R.id.book_list);
+//        ArrayAdapter<String> adapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, displayList);
+//        bookListView.setAdapter(adapter);
+
+
+//        this.activity.setContentView(R.layout.book_selection);
+        recyclerView = (RecyclerView) rootView.findViewById(R.id.book_recycle_view);
+        layoutManager = new LinearLayoutManager(this.activity);
+        recyclerView.setLayoutManager(layoutManager);
+        mAdapter = new BookListAdapter(displayList, bookList, activity);
+        recyclerView.setAdapter(mAdapter);
+
+//        ArrayAdapter<String> adapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, displayList);
+//        bookListView.setAdapter(adapter);
+
 
         setUpFileChoice(); // TODO come up with a better name
 
+        /*
         bookListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapter, View v, int position, long arg3) {
@@ -61,6 +82,8 @@ public class BookSelectionFragment extends Fragment {
                 // do what you intend to do on click of listview row
             }
         });
+
+         */
 
 
         return rootView;
