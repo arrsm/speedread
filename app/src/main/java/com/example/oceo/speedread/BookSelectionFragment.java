@@ -44,6 +44,7 @@ public class BookSelectionFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         rootView = inflater.inflate(R.layout.book_selection, container, false);
+
         bookListView = rootView.findViewById(R.id.book_list);
         ArrayAdapter<String> adapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, displayList);
         bookListView.setAdapter(adapter);
