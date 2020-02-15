@@ -66,6 +66,7 @@ public class BookReaderFragment extends Fragment {
     bookmarks and notes
     settings menu
         hide progress /slider
+    override back to book selection action so new books added appear there
 
     https://www.programcreek.com/java-api-examples/?api=nl.siegmann.epublib.domain.SpineReference
     */

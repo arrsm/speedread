@@ -102,6 +102,27 @@ public class PrefsUtil {
         }
     }
 
+    public static void removeBookFromPrefs(Activity activity, String book) {
+        Log.d("removing book from prefs", activity.toString());
+        SharedPreferences sharedPref = activity.getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        ArrayList<String> currentBookList = readBooksFromPrefs(activity);
+
+        if (currentBookList == null) {
+            currentBookList = new ArrayList<String>();
+        }
+
+
+        if (currentBookList.contains(book)) {
+            currentBookList.remove(book);
+            Gson gson = new Gson();
+            String booksListJSON = gson.toJson(currentBookList);
+            editor.putString("books", booksListJSON);
+            editor.apply();
+            editor.commit();
+        }
+    }
+
     public static ArrayList<String> readBooksFromPrefs(Activity activity) {
         SharedPreferences sharedPref = activity.getPreferences(Context.MODE_PRIVATE);
         String gsonBooksString = sharedPref.getString("books", null);
