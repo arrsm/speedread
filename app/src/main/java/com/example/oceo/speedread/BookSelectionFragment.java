@@ -13,6 +13,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -56,7 +58,11 @@ public class BookSelectionFragment extends Fragment {
         displayList = SpeedReadUtilities.bookNamesFromPath(this.bookList);
         selectionCallback = (MainActivity) activity;
         removalCallback = (MainActivity) activity;
+
+
     }
+
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {

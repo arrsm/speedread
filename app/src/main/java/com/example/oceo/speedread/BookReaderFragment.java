@@ -71,6 +71,7 @@ public class BookReaderFragment extends Fragment {
     scroll left or right for next sentences
     currsentenceIdx variable name is causing confusing and issues - update it
     maybe modify main rx function to take display strs as a parameter instead of using the global?
+    err message if book is not epub
 
     https://www.programcreek.com/java-api-examples/?api=nl.siegmann.epublib.domain.SpineReference
     */
