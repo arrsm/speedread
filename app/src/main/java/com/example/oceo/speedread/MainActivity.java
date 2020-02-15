@@ -3,18 +3,22 @@ package com.example.oceo.speedread;
 import android.app.Activity;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentTransaction;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 
 import java.util.ArrayList;
 
 import io.reactivex.disposables.Disposable;
 
 
-public class MainActivity extends FragmentActivity
+public class MainActivity extends AppCompatActivity
         implements BookSelectionFragment.SendChosenFile, BookSelectionFragment.RemoveChosenFile {
     String TAG = "MainActivity";
     Activity activity;
@@ -92,6 +96,29 @@ public class MainActivity extends FragmentActivity
 
        */
 
+    }
+
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        //https://developer.android.com/guide/topics/ui/menus.html
+        Log.d("main", "crating menu");
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.settings_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.color_menu_item:
+                // Action goes here
+                return true;
+            case R.id.wpm_menu_option:
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
 
