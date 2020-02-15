@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ public class BookListAdapter extends RecyclerView.Adapter<BookListAdapter.MyView
     private ArrayList<String> mDataset;
     private ArrayList<String> bookList;
     BookSelectionFragment.SendChosenFile selectionCallback;
+    BookSelectionFragment.RemoveChosenFile bookRemovalCallback;
 
 
     // Provide a reference to the views for each data item
@@ -23,36 +25,32 @@ public class BookListAdapter extends RecyclerView.Adapter<BookListAdapter.MyView
     public static class MyViewHolder extends RecyclerView.ViewHolder {
         // each data item is just a string in this case
         public TextView textView;
+        public Button deleteButton;
 
         public MyViewHolder(View v) {
             super(v);
             textView = v.findViewById(R.id.book_title);
+            deleteButton = v.findViewById(R.id.delete_btn);
         }
     }
 
-    // Provide a suitable constructor (depends on the kind of dataset)
     public BookListAdapter(ArrayList<String> myDataset, ArrayList<String> bookList, Activity activity) {
         mDataset = myDataset;
         this.bookList = bookList;
         selectionCallback = (MainActivity) activity;
+        bookRemovalCallback = (MainActivity) activity;
     }
 
-    // Create new views (invoked by the layout manager)
     @Override
-    public BookListAdapter.MyViewHolder onCreateViewHolder(ViewGroup parent,
-                                                           int viewType) {
-        // create a new view
-        View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.book_selection_item, parent, false);
+    public BookListAdapter.MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        View v = LayoutInflater.from(parent.getContext()).
+                inflate(R.layout.book_selection_item, parent, false);
         MyViewHolder vh = new MyViewHolder(v);
         return vh;
     }
 
-    // Replace the contents of a view (invoked by the layout manager)
     @Override
     public void onBindViewHolder(MyViewHolder holder, int position) {
-        // - get element from your dataset at this position
-        // - replace the contents of the view with that element
         holder.textView.setText(mDataset.get(position));
         holder.textView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -60,14 +58,20 @@ public class BookListAdapter extends RecyclerView.Adapter<BookListAdapter.MyView
                 String value = (String) mDataset.get(position);
                 Log.d("ADAPTER", "onItemSelected: " + mDataset.get(position));
                 selectionCallback.sendFilePath(bookList.get(position));
-                // assuming string and if you want to get the value on click of list item
-                // do what you intend to do on click of listview row
+            }
+        });
+
+        holder.deleteButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String value = (String) mDataset.get(position);
+                Log.d("ADAPTER", "deleting: " + mDataset.get(position));
+                bookRemovalCallback.removeFile(bookList.get(position));
             }
         });
 
     }
 
-    // Return the size of your dataset (invoked by the layout manager)
     @Override
     public int getItemCount() {
         return mDataset.size();

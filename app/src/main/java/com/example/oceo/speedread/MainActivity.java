@@ -9,10 +9,13 @@ import androidx.fragment.app.FragmentTransaction;
 import android.os.Bundle;
 import android.util.Log;
 
+import java.util.ArrayList;
+
 import io.reactivex.disposables.Disposable;
 
 
-public class MainActivity extends FragmentActivity implements BookSelectionFragment.SendChosenFile {
+public class MainActivity extends FragmentActivity
+        implements BookSelectionFragment.SendChosenFile, BookSelectionFragment.RemoveChosenFile {
     String TAG = "MainActivity";
     Activity activity;
     private int currentChapter;
@@ -159,8 +162,20 @@ public class MainActivity extends FragmentActivity implements BookSelectionFragm
                 .replace(R.id.container, br)
                 .addToBackStack("tag");
         transaction.commit();
-
     }
 
+    @Override
+    public void removeFile(String fPath) {
+        Bundle bundle = new Bundle();
+        bundle.putString("file_path", fPath);
+        BookSelectionFragment bs = new BookSelectionFragment();
+        bs.setArguments(bundle);
+        PrefsUtil.removeBookFromPrefs(this, fPath);
 
+        FragmentTransaction transaction = getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.container, bs)
+                .addToBackStack("tag");
+        transaction.commit();
+    }
 }

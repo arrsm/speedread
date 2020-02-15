@@ -31,6 +31,7 @@ public class BookSelectionFragment extends Fragment {
     private ArrayList<String> bookList;
     private ArrayList<String> displayList;
     SendChosenFile selectionCallback;
+    RemoveChosenFile removalCallback;
     Button fileChooseButton;
     String filePath;
 
@@ -44,9 +45,17 @@ public class BookSelectionFragment extends Fragment {
         super.onCreate(savedInstanceState);
         this.activity = getActivity();
         this.frag = this;
+
+        Bundle bundle = this.getArguments();
+        //TODO maybe remove this stuff
+//        this.chosenFilePath = bundle.getString("file_path");
+//        this.chosenFileName = SpeedReadUtilities.bookNameFromPath(this.chosenFilePath);
+
+
         this.bookList = PrefsUtil.readBooksFromPrefs(activity);
         displayList = SpeedReadUtilities.bookNamesFromPath(this.bookList);
         selectionCallback = (MainActivity) activity;
+        removalCallback = (MainActivity) activity;
     }
 
     @Override
@@ -135,5 +144,9 @@ public class BookSelectionFragment extends Fragment {
      */
     interface SendChosenFile {
         void sendFilePath(String fPath);
+    }
+
+    interface RemoveChosenFile {
+        void removeFile(String fPath);
     }
 }
