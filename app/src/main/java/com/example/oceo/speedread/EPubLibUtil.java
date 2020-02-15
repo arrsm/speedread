@@ -35,11 +35,11 @@ public class EPubLibUtil {
 
         try {
             InputStream epubInputStream = new FileInputStream(file.toString());
-            Log.d("what is it", file.toString());
+//            Log.d("what is it", file.toString());
             if (file.toString().contains(".epub")) {
                 book = (new EpubReader()).readEpub(epubInputStream);
             } else {
-                Log.d("GetBook", "Not an Epub");
+//                Log.d("GetBook", "Not an Epub");
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -55,10 +55,10 @@ public class EPubLibUtil {
         byte[] data = "holder".getBytes();
         for (int ii = 0; ii < resources.size(); ii++) {
             String z = resources.get(ii).getHref();
-            Log.d("given: ", imgHref);
-            Log.d("the href: ", z);
-            Log.d("contains", String.valueOf(imgHref.contains(z)));
-            Log.d("contains", String.valueOf(z.contains(imgHref)));
+//            Log.d("given: ", imgHref);
+//            Log.d("the href: ", z);
+//            Log.d("contains", String.valueOf(imgHref.contains(z)));
+//            Log.d("contains", String.valueOf(z.contains(imgHref)));
             // it isnt clear which one will be larger
             // oathbringer chpt 4 is an example of the first condition
             // hyperian prologue is an example of seocnd
@@ -85,34 +85,34 @@ public class EPubLibUtil {
 
     public static void exploreResources(Book book) {
         //TODO
-        Log.d("explorerResources", "start");
+//        Log.d("explorerResources", "start");
         Resources resource = book.getResources();
-        Log.d("explorerResources", "done");
+//        Log.d("explorerResources", "done");
 
     }
 
 
     public static List<TOCReference> exploreTOC(Book book) {
-        Log.d("explorerTOC", "start");
+//        Log.d("explorerTOC", "start");
         TableOfContents toc = book.getTableOfContents();
 //        List<Resource> uniqueRes = toc.getAllUniqueResources();
         List<TOCReference> tocReferences = toc.getTocReferences();
-        Log.d("explorerTOC", "done");
+//        Log.d("explorerTOC", "done");
         return tocReferences;
     }
 
 
     public static void exploreGuide(Book book) {
-        Log.d("exploreGuide", "start");
+//        Log.d("exploreGuide", "start");
         Guide guide = book.getGuide();
-        Log.d("exploreGuide", "done");
+//        Log.d("exploreGuide", "done");
     }
 
 
     public static void exploreSpine(Book book) {
-        Log.d("exploreSpine", "start");
+//        Log.d("exploreSpine", "start");
         Spine spine = book.getSpine();
-        Log.d("exploreSpine", "done");
+//        Log.d("exploreSpine", "done");
     }
 
     public static void unZipEPUB() {

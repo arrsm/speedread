@@ -69,6 +69,8 @@ public class BookReaderFragment extends Fragment {
         hide progress /slider
     override back to book selection action so new books added appear there
     scroll left or right for next sentences
+    currsentenceIdx variable name is causing confusing and issues - update it
+    maybe modify main rx function to take display strs as a parameter instead of using the global?
 
     https://www.programcreek.com/java-api-examples/?api=nl.siegmann.epublib.domain.SpineReference
     */
@@ -168,9 +170,7 @@ public class BookReaderFragment extends Fragment {
     @Override
     public void onPause() {
         Log.d(TAG, "onCreateView");
-        if (disposableReader != null && !disposableReader.isDisposed()) {
-            disposableReader.dispose();
-        }
+        disposeListener();
         bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
         bookDetails.put(WORD_KEY, String.valueOf(currentWordIdx));
         bookDetails.put(SENTENCE_START_KEY, String.valueOf(currSentenceStart));
@@ -233,21 +233,21 @@ public class BookReaderFragment extends Fragment {
 
         currentChunkView.setOnTouchListener(new OnSwipeTouchListener(this.activity) {
             public void onSwipeTop() {
-                Toast.makeText(activity, "top", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(activity, "top", Toast.LENGTH_SHORT).show();
             }
 
             public void onSwipeRight() {
-                Toast.makeText(activity, "right", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(activity, "right", Toast.LENGTH_SHORT).show();
                 moveToNextSentence();
             }
 
             public void onSwipeLeft() {
-                Toast.makeText(activity, "left", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(activity, "left", Toast.LENGTH_SHORT).show();
                 moveToPrevSentence();
             }
 
             public void onSwipeBottom() {
-                Toast.makeText(activity, "bottom", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(activity, "bottom", Toast.LENGTH_SHORT).show();
             }
 
         });
@@ -300,9 +300,7 @@ public class BookReaderFragment extends Fragment {
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
 //                Log.d(TAG, "seekBar start tracking touch");
-                if (disposableReader != null && !disposableReader.isDisposed()) {
-                    disposableReader.dispose();
-                }
+                disposeListener();
             }
 
             @Override
@@ -328,31 +326,40 @@ public class BookReaderFragment extends Fragment {
         Log.d("moveToPrevSentence before: ", "curr: " + String.valueOf(this.currSentenceStart));
         int prevSentenceStart = getSentenceStartIdx(this.currSentenceStart - 2);
         Log.d("moveToPrevSentence after: ", "curr: " + String.valueOf(prevSentenceStart));
-        if (disposableReader != null && !disposableReader.isDisposed()) {
-            disposableReader.dispose();
-        }
+        disposeListener();
         this.currSentenceStart = prevSentenceStart;
         this.currentWordIdx = prevSentenceStart;
+        this.currSentenceIdx = 0;
         int sentenceEndIdx = getNextSentencesStartIdx(story, 1, this.currentWordIdx);
+
         StringBuilder prevSentence = getStringFromTokenIndexes(prevSentenceStart, sentenceEndIdx);
         this.currentChunkView.setText(prevSentence);
 //        iterateWords();
     }
 
+    public void disposeListener() {
+        Log.d("disposing Listener", "START");
+        Log.d("disposing Listener", "currentWordIdx: " + String.valueOf(this.currentWordIdx));
+        Log.d("disposing Listener", "currentSentenceStart: " + String.valueOf(this.currSentenceStart));
+        Log.d("disposing Listener", "cur: " + String.valueOf(this.currSentenceStart));
+
+        if (disposableReader != null && !disposableReader.isDisposed()) {
+            disposableReader.dispose();
+        }
+    }
 
     public void moveToNextSentence() {
         int nextSentenceStart = getNextSentencesStartIdx(this.story, 1, currentWordIdx);
         Log.d("moveToPrevSentence before: ", "curr: " + String.valueOf(this.currSentenceStart));
         int prevSentenceStart = getSentenceStartIdx(this.currSentenceStart - 2);
         Log.d("moveToPrevSentence after: ", "curr: " + String.valueOf(prevSentenceStart));
-        if (disposableReader != null && !disposableReader.isDisposed()) {
-            disposableReader.dispose();
-        }
+        disposeListener();
         this.currSentenceStart = nextSentenceStart;
         this.currentWordIdx = nextSentenceStart;
         int sentenceEndIdx = getNextSentencesStartIdx(story, 1, nextSentenceStart);
         StringBuilder nextSentence = getStringFromTokenIndexes(nextSentenceStart, sentenceEndIdx);
         this.currentChunkView.setText(nextSentence);
+        this.currSentenceIdx = 0;
 //        iterateWords();
     }
 
@@ -377,7 +384,7 @@ public class BookReaderFragment extends Fragment {
     private Bitmap getBookImages(List<Resource> res, String imgHref) {
 //        String tempHref = "images/Simm_9780307781888_epub_L03_r1.jpg";
 //        tempHref = "OEBPS/images/Simm_9780307781888_epub_L03_r1.jpg";
-//        tempHref = "images/OB_ARCH_ebook_004.gif.transcoded1535572045.png" // WORKS sanderson chapt 4;
+//        tempHref = "images/OB_ARCH_ebook_004.gif.transcoded1535572045.png" // WORKS sanderson chap/t 4;
         return EPubLibUtil.getBitmapFromResources(res, imgHref, this.book);
     }
 
@@ -405,9 +412,7 @@ public class BookReaderFragment extends Fragment {
                 String selectedItem = tocResourceIds.get(position);
                 if (++firstTimeFlag > 1) { // do not update on launch
                     currentChapter = EPubLibUtil.mapTOCToSpine(book, selectedItem);
-                    if (disposableReader != null && !disposableReader.isDisposed()) {
-                        disposableReader.dispose();
-                    }
+                    disposeListener();
                     bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
                     PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
                     currentChapterview.setText("Section: " + String.valueOf(currentChapter + 1));
@@ -511,11 +516,16 @@ public class BookReaderFragment extends Fragment {
         return displayStrs;
     }
 
+    public void setDisplayStrs(int sentenceEndIdx) {
+        this.displayStrs = buildBoldSentences(this.story, currSentenceStart, sentenceEndIdx);
+    }
+
     public void iterateWords() {
-        int tempWordIdx = this.currentWordIdx;
         int sentencesEndIdx = getNextSentencesStartIdx(story, 1, this.currentWordIdx);
         this.displayStrs = buildBoldSentences(this.story, currSentenceStart, sentencesEndIdx);
 
+//        int tempWordIdx = this.currentWordIdx;
+        int tempWordIdx = this.currSentenceStart;
         Observable rangeObs = Observable.range(tempWordIdx, sentencesEndIdx - currentWordIdx);
         rangeObs = rangeObs.concatMap(i -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS));
         rangeObs = rangeObs.delay(this.sentenceDelay, TimeUnit.MILLISECONDS); // delay at the end of the sentence
@@ -524,7 +534,8 @@ public class BookReaderFragment extends Fragment {
         disposableReader = rangeObs.subscribe(wordIdx -> {
 //                    Log.d("The OBS", String.valueOf(wordIdx) + " / " + String.valueOf(sentencesEndIdx));
                     if (this.currSentenceIdx < this.displayStrs.size()) {
-
+                        Log.d("The OBS", "Is IN of Bounds");
+                        Log.d(TAG, String.valueOf(this.currentWordIdx) + " / " + String.valueOf(this.displayStrs.size()));
                         currentChunkView.setText(Html.fromHtml(this.displayStrs.get(this.currSentenceIdx).toString()));
                         this.currentWordView.setText(this.story.get(this.currentWordIdx));
                         this.currSentenceIdx++;
@@ -570,9 +581,7 @@ public class BookReaderFragment extends Fragment {
             public void onClick(View v) {
                 currentChapter += 1;
                 if (book != null) {
-                    if (disposableReader != null && !disposableReader.isDisposed()) {
-                        disposableReader.dispose();
-                    }
+                    disposeListener();
                     bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
                     PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
                     currentChapterview.setText("Section: " + String.valueOf(currentChapter + 1));
@@ -594,9 +603,7 @@ public class BookReaderFragment extends Fragment {
                         bookDetails.put(CHAPTER_KEY, String.valueOf(currentChapter));
                         PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails);
                         currentChapterview.setText("Section: " + String.valueOf(currentChapter + 1));
-                        if (disposableReader != null && !disposableReader.isDisposed()) {
-                            disposableReader.dispose();
-                        }
+                        disposeListener();
                         resetChapterGlobals();
                         setStoryTokens();
                         iterateWords();
