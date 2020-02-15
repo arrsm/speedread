@@ -1,4 +1,6 @@
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-android'
 apply plugin: 'com.google.gms.google-services'  // Google Services plugin
 
 android {
@@ -30,6 +32,7 @@ repositories {
     maven {
         url 'https://github.com/psiegman/mvn-repo/raw/master/releases'
     }
+    mavenCentral()
 }
 
 dependencies {
@@ -53,7 +56,8 @@ dependencies {
     implementation 'com.google.firebase:firebase-messaging:20.1.0'
     implementation 'com.google.firebase:firebase-core:17.2.1'
     implementation "androidx.recyclerview:recyclerview:1.1.0"
-
+    compile "androidx.core:core-ktx:+"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
 
 }
