@@ -24,6 +24,7 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -67,6 +68,7 @@ public class BookReaderFragment extends Fragment {
     settings menu
         hide progress /slider
     override back to book selection action so new books added appear there
+    scroll left or right for next sentences
 
     https://www.programcreek.com/java-api-examples/?api=nl.siegmann.epublib.domain.SpineReference
     */
@@ -214,6 +216,9 @@ public class BookReaderFragment extends Fragment {
             }
         });
         */
+
+        /*
+        // TODO incorporate text selection. this is not functional atm due to swipe replacing the touchlistenr
         currentChunkView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -223,6 +228,30 @@ public class BookReaderFragment extends Fragment {
                 return false;
             }
         });
+        */
+
+
+        currentChunkView.setOnTouchListener(new OnSwipeTouchListener(this.activity) {
+            public void onSwipeTop() {
+                Toast.makeText(activity, "top", Toast.LENGTH_SHORT).show();
+            }
+
+            public void onSwipeRight() {
+                Toast.makeText(activity, "right", Toast.LENGTH_SHORT).show();
+                moveToNextSentence();
+            }
+
+            public void onSwipeLeft() {
+                Toast.makeText(activity, "left", Toast.LENGTH_SHORT).show();
+                moveToPrevSentence();
+            }
+
+            public void onSwipeBottom() {
+                Toast.makeText(activity, "bottom", Toast.LENGTH_SHORT).show();
+            }
+
+        });
+
 
         pauseResumeBtn = rootView.findViewById(R.id.pause_resume);
         pauseResumeBtn.setOnClickListener(new View.OnClickListener() {
@@ -295,10 +324,53 @@ public class BookReaderFragment extends Fragment {
         return rootView;
     }
 
+    public void moveToPrevSentence() {
+        Log.d("moveToPrevSentence before: ", "curr: " + String.valueOf(this.currSentenceStart));
+        int prevSentenceStart = getSentenceStartIdx(this.currSentenceStart - 2);
+        Log.d("moveToPrevSentence after: ", "curr: " + String.valueOf(prevSentenceStart));
+        if (disposableReader != null && !disposableReader.isDisposed()) {
+            disposableReader.dispose();
+        }
+        this.currSentenceStart = prevSentenceStart;
+        this.currentWordIdx = prevSentenceStart;
+        int sentenceEndIdx = getNextSentencesStartIdx(story, 1, this.currentWordIdx);
+        StringBuilder prevSentence = getStringFromTokenIndexes(prevSentenceStart, sentenceEndIdx);
+        this.currentChunkView.setText(prevSentence);
+//        iterateWords();
+    }
+
+
+    public void moveToNextSentence() {
+        int nextSentenceStart = getNextSentencesStartIdx(this.story, 1, currentWordIdx);
+        Log.d("moveToPrevSentence before: ", "curr: " + String.valueOf(this.currSentenceStart));
+        int prevSentenceStart = getSentenceStartIdx(this.currSentenceStart - 2);
+        Log.d("moveToPrevSentence after: ", "curr: " + String.valueOf(prevSentenceStart));
+        if (disposableReader != null && !disposableReader.isDisposed()) {
+            disposableReader.dispose();
+        }
+        this.currSentenceStart = nextSentenceStart;
+        this.currentWordIdx = nextSentenceStart;
+        int sentenceEndIdx = getNextSentencesStartIdx(story, 1, nextSentenceStart);
+        StringBuilder nextSentence = getStringFromTokenIndexes(nextSentenceStart, sentenceEndIdx);
+        this.currentChunkView.setText(nextSentence);
+//        iterateWords();
+    }
+
+
+    public StringBuilder getStringFromTokenIndexes(int startIdx, int endIdx) {
+        int temp = startIdx;
+        StringBuilder str = new StringBuilder();
+        while (temp < endIdx) {
+            str.append(this.story.get(temp) + " ");
+            temp++;
+        }
+        return str;
+    }
+
     public void scrollSentences(int numSentences) {
         //TODO testing
         // average number of sentences in a page for page turn?
-        int startIdx = getNextSentencesEndIdx(this.story, numSentences, currentWordIdx);
+        int startIdx = getNextSentencesStartIdx(this.story, numSentences, currentWordIdx);
         this.currSentenceStart = startIdx + 1;
     }
 
@@ -391,7 +463,7 @@ public class BookReaderFragment extends Fragment {
         return (earlierTokenCount -= 1);
     }
 
-    public int getNextSentencesEndIdx(ArrayList<String> tokens, int numSentences, int startIdx) {
+    public int getNextSentencesStartIdx(ArrayList<String> tokens, int numSentences, int startIdx) {
         int foundSentences = 0;
         int temp = startIdx;
         while (foundSentences < numSentences) {
@@ -441,7 +513,7 @@ public class BookReaderFragment extends Fragment {
 
     public void iterateWords() {
         int tempWordIdx = this.currentWordIdx;
-        int sentencesEndIdx = getNextSentencesEndIdx(story, 1, this.currentWordIdx);
+        int sentencesEndIdx = getNextSentencesStartIdx(story, 1, this.currentWordIdx);
         this.displayStrs = buildBoldSentences(this.story, currSentenceStart, sentencesEndIdx);
 
         Observable rangeObs = Observable.range(tempWordIdx, sentencesEndIdx - currentWordIdx);
