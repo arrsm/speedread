@@ -34,6 +34,8 @@ public class MainActivity extends AppCompatActivity
         if (savedInstanceState == null) {
 //            addBookReaderFragment();
             addBookSelectionFragment();
+
+            //https://stackoverflow.com/questions/38390085/how-to-inflate-an-optionsmenu-vertically-on-a-button-click
         }
 
 
