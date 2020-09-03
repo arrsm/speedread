@@ -1,48 +1,37 @@
-package com.example.oceo.speedread;
+package com.example.oceo.speedread
 
-import android.app.Activity;
+import android.app.Activity
+import android.os.Bundle
+import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
+import androidx.appcompat.app.AppCompatActivity
+import com.example.oceo.speedread.BookSelectionFragment.RemoveChosenFile
+import com.example.oceo.speedread.BookSelectionFragment.SendChosenFile
+import io.reactivex.disposables.Disposable
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.FragmentActivity;
-import androidx.fragment.app.FragmentTransaction;
-
-import android.os.Bundle;
-import android.util.Log;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
-
-import java.util.ArrayList;
-
-import io.reactivex.disposables.Disposable;
-
-
-public class MainActivity extends AppCompatActivity
-        implements BookSelectionFragment.SendChosenFile, BookSelectionFragment.RemoveChosenFile {
-    String TAG = "MainActivity";
-    Activity activity;
-    private int currentChapter;
-    private int currentWordIdx;
-    Disposable disposableReader;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        activity = this;
-        setContentView(R.layout.activity_main);
+class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
+    var TAG = "MainActivity"
+    var activity: Activity? = null
+    private val currentChapter = 0
+    private val currentWordIdx = 0
+    var disposableReader: Disposable? = null
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        activity = this
+        setContentView(R.layout.activity_main)
         if (savedInstanceState == null) {
 //            addBookReaderFragment();
-            addBookSelectionFragment();
+            addBookSelectionFragment()
 
             //https://stackoverflow.com/questions/38390085/how-to-inflate-an-optionsmenu-vertically-on-a-button-click
         }
 
 
-      /*
+        /*
         firebase
      */
-      /*
+        /*
 
         Button logTokenButton = findViewById(R.id.logTokenButton);
         logTokenButton.setOnClickListener(new View.OnClickListener() {
@@ -97,114 +86,94 @@ public class MainActivity extends AppCompatActivity
         });
 
        */
-
     }
 
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
         //https://developer.android.com/guide/topics/ui/menus.html
-        Log.d("main", "crating menu");
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.settings_menu, menu);
-        return true;
+        Log.d("main", "crating menu")
+        val inflater = menuInflater
+        inflater.inflate(R.menu.settings_menu, menu)
+        return true
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.color_menu_item:
-                // Action goes here
-                return true;
-            case R.id.wpm_menu_option:
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.color_menu_item ->                 // Action goes here
+                true
+            R.id.wpm_menu_option -> true
+            else -> super.onOptionsItemSelected(item)
         }
     }
 
-
-    @Override
-    protected void onStart() {
+    override fun onStart() {
 //        Log.d(TAG, "onStart");
-        super.onStart();
+        super.onStart()
 
 //        RxSandbox.testMappingObs();
-
     }
 
-    @Override
-    protected void onRestart() {
+    override fun onRestart() {
 //        Log.d(TAG, "onSRestart");
-        super.onRestart();  // Always call the superclass method first
-
+        super.onRestart() // Always call the superclass method first
     }
 
-    @Override
-    public void onPause() {
+    public override fun onPause() {
 //        Log.d(TAG, "onPause");
-
-        super.onPause();
+        super.onPause()
     }
 
-    @Override
-    protected void onStop() {
+    override fun onStop() {
 //        Log.d(TAG, "onStop");
-        super.onStop();  // Always call the superclass method first
+        super.onStop() // Always call the superclass method first
     }
 
-    @Override
-    public void onResume() {
-        Log.d(TAG, "onResume");
-        super.onResume();
-
+    public override fun onResume() {
+        Log.d(TAG, "onResume")
+        super.onResume()
     }
 
-
-    private void addBookReaderFragment() {
-        BookReaderFragment fragment = new BookReaderFragment();
-        FragmentTransaction transaction = getSupportFragmentManager()
+    private fun addBookReaderFragment() {
+        val fragment = BookReaderFragment()
+        val transaction = supportFragmentManager
                 .beginTransaction()
                 .replace(R.id.container, fragment)
-                .addToBackStack("tag");
-        transaction.commit();
+                .addToBackStack("tag")
+        transaction.commit()
     }
 
-    private void addBookSelectionFragment() {
-        BookSelectionFragment fragment = new BookSelectionFragment();
-        FragmentTransaction transaction = getSupportFragmentManager()
+    private fun addBookSelectionFragment() {
+        val fragment = BookSelectionFragment()
+        val transaction = supportFragmentManager
                 .beginTransaction()
                 .replace(R.id.container, fragment)
-                .addToBackStack("tag");
-        transaction.commit();
+                .addToBackStack("tag")
+        transaction.commit()
     }
 
-    @Override
-    public void sendFilePath(String fPath) {
-        Bundle bundle = new Bundle();
-        bundle.putString("file_path", fPath);
-        BookReaderFragment br = new BookReaderFragment();
-        br.setArguments(bundle);
-
-        FragmentTransaction transaction = getSupportFragmentManager()
+    override fun sendFilePath(fPath: String?) {
+        val bundle = Bundle()
+        bundle.putString("file_path", fPath)
+        val br = BookReaderFragment()
+        br.arguments = bundle
+        val transaction = supportFragmentManager
                 .beginTransaction()
                 .replace(R.id.container, br)
-                .addToBackStack("tag");
-        transaction.commit();
+                .addToBackStack("tag")
+        transaction.commit()
     }
 
-    @Override
-    public void removeFile(String fPath) {
-        Bundle bundle = new Bundle();
-        bundle.putString("file_path", fPath);
-        BookSelectionFragment bs = new BookSelectionFragment();
-        bs.setArguments(bundle);
-        PrefsUtil.removeBookFromPrefs(this, fPath);
-
-        FragmentTransaction transaction = getSupportFragmentManager()
+    override fun removeFile(fPath: String?) {
+        val bundle = Bundle()
+        bundle.putString("file_path", fPath)
+        val bs = BookSelectionFragment()
+        bs.arguments = bundle
+        PrefsUtil.removeBookFromPrefs(this, fPath)
+        val transaction = supportFragmentManager
                 .beginTransaction()
                 .replace(R.id.container, bs)
-                .addToBackStack("tag");
-        transaction.commit();
+                .addToBackStack("tag")
+        transaction.commit()
     }
+
+
 }
