@@ -127,7 +127,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onStart() {
 //        Log.d(TAG, "onStart");
-        super.onStart();  // Always call the superclass method first
+        super.onStart();
 
 //        RxSandbox.testMappingObs();
 
@@ -144,7 +144,7 @@ public class MainActivity extends AppCompatActivity
     public void onPause() {
 //        Log.d(TAG, "onPause");
 
-        super.onPause();  // Always call the superclass method first
+        super.onPause();
     }
 
     @Override
@@ -156,7 +156,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onResume() {
         Log.d(TAG, "onResume");
-        super.onResume();  // Always call the superclass method first
+        super.onResume();
 
     }
 

@@ -45,8 +45,7 @@ public class BookListAdapter extends RecyclerView.Adapter<BookListAdapter.MyView
     public BookListAdapter.MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext()).
                 inflate(R.layout.book_selection_item, parent, false);
-        MyViewHolder vh = new MyViewHolder(v);
-        return vh;
+        return new MyViewHolder(v);
     }
 
     @Override
