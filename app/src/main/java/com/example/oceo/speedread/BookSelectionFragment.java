@@ -146,7 +146,9 @@ public class BookSelectionFragment extends Fragment {
 
 
     /*
-        callback method
+        callback interfaces - why are they defined here but implemented in main
+        https://stackoverflow.com/questions/18279302/how-do-i-perform-a-java-callback-between-classes
+        TODO - test implementing in another class as well as mainactivity and see if both implementors get triggerd
      */
     interface SendChosenFile {
         void sendFilePath(String fPath);

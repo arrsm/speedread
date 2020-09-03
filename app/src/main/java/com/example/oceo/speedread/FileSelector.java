@@ -19,6 +19,7 @@ public class FileSelector extends AppCompatActivity {
 
 
     public static void launchFileChooser(Fragment frag) {
+        // TODO https://developer.android.com/reference/android/content/Intent.html
         Intent chooseFile = new Intent(Intent.ACTION_GET_CONTENT);
         chooseFile.setType("*/*");
         chooseFile = Intent.createChooser(chooseFile, "Choose a file");
