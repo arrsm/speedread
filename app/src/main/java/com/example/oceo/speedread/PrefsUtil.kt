@@ -31,13 +31,15 @@ object PrefsUtil {
         }
     }
 
-    fun readBookDetailsFromPrefs(activity: Activity, bookName: String?): HashMap<String, String> {
+    fun readBookDetailsFromPrefs(activity: Activity, bookName: String?): HashMap<String, String>? {
         val sharedPref = activity.getPreferences(Context.MODE_PRIVATE)
         val bookDetailsJson = sharedPref.getString(bookName, null)
         val gson = Gson()
         val type = object : TypeToken<HashMap<String?, String?>?>() {}.type
         val bookDetails = gson.fromJson<HashMap<String, String>>(bookDetailsJson, type)
-        Log.d("chapter from prefs", bookDetails.toString())
+//        bookDetails.let {
+//            Log.d("chapter from prefs", it?.toString())
+//        }
         return bookDetails
     }
 

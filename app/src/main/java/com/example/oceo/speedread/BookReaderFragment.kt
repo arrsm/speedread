@@ -29,6 +29,7 @@ import com.example.oceo.speedread.EPubLibUtil.Companion.mapSpineToTOC
 import com.example.oceo.speedread.EPubLibUtil.Companion.mapTOCToSpine
 import com.example.oceo.speedread.SpeedReadUtilities.Companion.WPMtoMS
 import com.example.oceo.speedread.SpeedReadUtilities.Companion.bookNameFromPath
+import com.example.oceo.speedread.parser.getChapter
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
@@ -45,6 +46,8 @@ import java.util.concurrent.TimeUnit
 
 class BookReaderFragment : Fragment() {
     /*
+    sometimes sentence scroll doesnt work..
+    long sentences can break the ui by overflowing to the point that the menu options become hidden
     is the span method used in cTextSelect callback better than my sentence generations?
     percentage read of chapter/book
     indication for when reading is happening
@@ -121,6 +124,7 @@ class BookReaderFragment : Fragment() {
     private val REPEAT_DELAY: Long = 50
     private val WPMUpdateHandler = Handler()
     var textSelectionMenu: cTextSelectionMenu? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         activity = getActivity()
@@ -132,8 +136,6 @@ class BookReaderFragment : Fragment() {
         val text = activity!!.intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)
         if (text != null) {
             Log.d("play with text", text.toString())
-
-            // process the text
         }
     }
 
@@ -163,9 +165,7 @@ class BookReaderFragment : Fragment() {
         super.onPause()
     }
 
-    /*
-    text selection
-    */
+
     private fun handleTextSelection() {
         if (currentChunkView == null) {
             return
@@ -180,53 +180,15 @@ class BookReaderFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         Log.d(TAG, "onCreateView")
         rootView = inflater.inflate(R.layout.book_reader, container, false)
-        book = readFile(chosenFilePath)
+        book = getBook(chosenFilePath)
         setupWPMControls()
         setupChapterControls(book)
         currentChunkView = rootView!!.findViewById(R.id.current_chunk)
-        /*
-        currentChunkView.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (!disposableReader.isDisposed()) {
-                    disposableReader.dispose();
-                } else {
-                    iterateWords();
-                }
 
-            }
-        });
-        */
+        //textSelection()
+        handleSwipes()
 
-        /*
-        // TODO incorporate text selection. this is not functional atm due to swipe replacing the touchlistenr
-        currentChunkView.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (MotionEvent.ACTION_UP == event.getAction()) {
-                    handleTextSelection();
-                }
-                return false;
-            }
-        });
-        */currentChunkView!!.setOnTouchListener(object : OnSwipeTouchListener(activity) {
-            override fun onSwipeTop() {
-//                Toast.makeText(activity, "top", Toast.LENGTH_SHORT).show();
-            }
-
-            override fun onSwipeRight() {
-//                Toast.makeText(activity, "right", Toast.LENGTH_SHORT).show();
-                moveToNextSentence()
-            }
-
-            override fun onSwipeLeft() {
-//                Toast.makeText(activity, "left", Toast.LENGTH_SHORT).show();
-                moveToPrevSentence()
-            }
-
-            override fun onSwipeBottom() {
-//                Toast.makeText(activity, "bottom", Toast.LENGTH_SHORT).show();
-            }
-        })
+        /* maybe a good candidate to try to move to a new fragment? */
         pauseResumeBtn = rootView!!.findViewById(R.id.pause_resume)
         pauseResumeBtn!!.setOnClickListener(View.OnClickListener {
             if (!disposableReader!!.isDisposed) {
@@ -237,26 +199,29 @@ class BookReaderFragment : Fragment() {
                 iterateWords()
             }
         })
+
         textSelectionMenu = cTextSelectionMenu(currentChunkView!!)
         currentWordView = rootView!!.findViewById(R.id.current_word)
         fullStoryView = rootView!!.findViewById(R.id.file_test)
         chapterSeekBar = rootView!!.findViewById(R.id.seekBar)
         chptProgressView = rootView!!.findViewById(R.id.chapter_progress_view)
+
         if (book != null) {
             PrefsUtil.writeBookToPrefs(activity!!, chosenFilePath)
-            tocResourceIds = tOCResourceIDs
+            tocResourceIds = getTOCResourceIds(exploreTOC(book!!), 0, ArrayList<String>())
             displayTOC()
             setStoryTokens()
         }
-        chapterSeekBar!!.setMax(maxWordIdx)
-        chapterSeekBar!!.setMin(0)
-        chapterSeekBar!!.setProgress(currentWordIdx)
+        chapterSeekBar!!.max = maxWordIdx
+        chapterSeekBar!!.min = 0
+        chapterSeekBar!!.progress = currentWordIdx
         chptPercentageComplete = java.lang.Float.valueOf(currentWordIdx.toFloat()) / java.lang.Float.valueOf(maxWordIdx.toFloat()) * 100
         if (chptPercentageComplete.toString().length > 3) {
             chptProgressView!!.setText(chptPercentageComplete.toString().substring(0, 4) + "%")
         } else {
             chptProgressView!!.setText("$chptPercentageComplete%")
         }
+
         chapterSeekBar!!.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
 //                Log.d("seeking: ", String.valueOf(progress));
@@ -283,6 +248,54 @@ class BookReaderFragment : Fragment() {
             }
         })
         return rootView
+    }
+
+    fun handleSwipes() {
+        currentChunkView!!.setOnTouchListener(object : OnSwipeTouchListener(activity) {
+            override fun onSwipeTop() {
+//                Toast.makeText(activity, "top", Toast.LENGTH_SHORT).show();
+            }
+
+            override fun onSwipeRight() {
+//                Toast.makeText(activity, "right", Toast.LENGTH_SHORT).show();
+                moveToPrevSentence()
+            }
+
+            override fun onSwipeLeft() {
+//                Toast.makeText(activity, "left", Toast.LENGTH_SHORT).show();
+                moveToNextSentence()
+            }
+
+            override fun onSwipeBottom() {
+//                Toast.makeText(activity, "bottom", Toast.LENGTH_SHORT).show();
+            }
+        })
+    }
+
+    fun textSelection() {
+        /*
+        currentChunkView.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if (!disposableReader.isDisposed()) {
+                    disposableReader.dispose();
+                } else {
+                    iterateWords();
+                }
+
+            }
+        });
+
+        // TODO incorporate text selection. this is not functional atm due to swipe replacing the touchlistenr
+        currentChunkView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (MotionEvent.ACTION_UP == event.getAction()) {
+                    handleTextSelection();
+                }
+                return false;
+            }
+        });
+        */
     }
 
     fun moveToPrevSentence() {
@@ -341,13 +354,8 @@ class BookReaderFragment : Fragment() {
         currSentenceStart = startIdx + 1
     }
 
-    private fun getBookImages(res: List<Resource?>, imgHref: String): Bitmap {
-//        String tempHref = "images/Simm_9780307781888_epub_L03_r1.jpg";
-//        tempHref = "OEBPS/images/Simm_9780307781888_epub_L03_r1.jpg";
-//        tempHref = "images/OB_ARCH_ebook_004.gif.transcoded1535572045.png" // WORKS sanderson chap/t 4;
-        return getBitmapFromResources(res, imgHref, book!!)
-    }
 
+    // can i make this logic more modular??
     fun displayTOC() {
         val tocRefs = exploreTOC(book!!)
         var TOCTitles = ArrayList<String>()
@@ -365,6 +373,7 @@ class BookReaderFragment : Fragment() {
         if (currentToCIdx != -1) {
             dropdown!!.setSelection(currentToCIdx)
         }
+
         dropdown!!.setOnItemSelectedListener(object : OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View, position: Int, id: Long) {
                 val selectedItem = tocResourceIds!![position]
@@ -384,16 +393,6 @@ class BookReaderFragment : Fragment() {
         })
     }
 
-    val tOCResourceIDs: ArrayList<String>
-        get() {
-            var tocIDs = ArrayList<String>()
-            tocIDs = getTOCResourceIds(exploreTOC(book!!), 0, tocIDs)
-            return tocIDs
-        }
-
-    fun readFile(fName: String?): Book? {
-        return getBook(fName)
-    }
 
     fun setStoryTokens() {
         // sets fullText (String containing entire chapter text)
@@ -469,9 +468,6 @@ class BookReaderFragment : Fragment() {
         return displayStrs
     }
 
-    fun setDisplayStrs(sentenceEndIdx: Int) {
-        displayStrs = buildBoldSentences(story, currSentenceStart, sentenceEndIdx)
-    }
 
     fun iterateWords() {
         val sentencesEndIdx = getNextSentencesStartIdx(story, 1, currentWordIdx)
@@ -481,14 +477,14 @@ class BookReaderFragment : Fragment() {
         val tempWordIdx = currSentenceStart
         var rangeObs: Observable<*> = Observable.range(tempWordIdx, sentencesEndIdx - currentWordIdx)
                 .concatMap { i: Any -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS) }
-//        rangeObs = rangeObs.concatMap(Function<*, *> { i: Any -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS) })
+
         rangeObs = rangeObs.delay(sentenceDelay, TimeUnit.MILLISECONDS) // delay at the end of the sentence
         rangeObs = rangeObs.observeOn(AndroidSchedulers.mainThread())
         disposableReader = rangeObs.subscribe({ wordIdx: Any? ->
 //                    Log.d("The OBS", String.valueOf(wordIdx) + " / " + String.valueOf(sentencesEndIdx));
             if (currSentenceIdx < displayStrs!!.size) {
-                Log.d("The OBS", "Is IN of Bounds")
-                Log.d(TAG, currentWordIdx.toString() + " / " + displayStrs!!.size.toString())
+//                Log.d("The OBS", "Is IN of Bounds")
+//                Log.d(TAG, currentWordIdx.toString() + " / " + displayStrs!!.size.toString())
                 currentChunkView!!.text = Html.fromHtml(displayStrs!![currSentenceIdx].toString())
                 currentWordView!!.text = story!![currentWordIdx]
                 currSentenceIdx++
@@ -550,7 +546,7 @@ class BookReaderFragment : Fragment() {
                 }
             }
         })
-        currentChapterview!!.setText("Section: " + (currentChapter + 1).toString())
+        currentChapterview!!.text = "Section: " + (currentChapter + 1).toString()
     }
 
     fun resetChapterGlobals() {
@@ -564,7 +560,7 @@ class BookReaderFragment : Fragment() {
         WPM = PrefsUtil.readLongFromPrefs(activityCopy, WPM_KEY)
         WPM_MS = WPMtoMS(WPM)
         sentenceDelay = PrefsUtil.readLongFromPrefs(activityCopy, SENTENCE_DELAY_KEY)
-        bookDetails = PrefsUtil.readBookDetailsFromPrefs(activityCopy, chosenFileName) as HashMap<String?, String?>
+        bookDetails = PrefsUtil.readBookDetailsFromPrefs(activityCopy, chosenFileName) as HashMap<String?, String?>?
         if (bookDetails == null) {
             bookDetails = HashMap()
         }
@@ -582,76 +578,13 @@ class BookReaderFragment : Fragment() {
         var chapterContents: String? = null
         if (book != null) {
             val spine = book.spine
-            chapterContents = getChapter(spine, chapterNumber)
+            chapterContents = getChapter(spine, chapterNumber, book, rootView!!)
         } else {
             Log.d("readSampleChpt", "book is null")
         }
         return chapterContents
     }
 
-    private fun getChapter(spine: Spine, spineLocation: Int): String? {
-        if (spineLocation > spine.size()) {
-            return null
-        }
-        val string = StringBuilder()
-        val res: Resource
-        val inStream: InputStream
-        val reader: BufferedReader
-        var line: String?
-        res = spine.getResource(spineLocation)
-        try {
-            inStream = res.inputStream
-            reader = BufferedReader(InputStreamReader(inStream))
-            while (reader.readLine().also { line = it } != null) {
-                val span = lineParser(line!!)
-                if (span != null) {
-                    string.append(span)
-                }
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-        // TODO check if this is faster than the if statement to add a space after each insert
-        return string.toString().replace(".", ". ")
-    }
-
-    private fun lineParser(line: String): Spanned? {
-        if (line.contains("<title>")) {
-            return null
-        }
-        val formattedLine = formatLine(line)
-        return Html.fromHtml(formattedLine)
-    }
-
-    private fun formatLine(line: String): String {
-        /*
-         * belongs to above fn
-         */
-        var line = line
-        if (line.contains("http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd")) {
-            line = line.substring(line.indexOf(">") + 1, line.length)
-        }
-
-        // REMOVE STYLES AND COMMENTS IN HTML
-        if (line.contains("{") && line.contains("}")
-                || line.contains("/*") && line.contains("*/")
-                || line.contains("<!--") && line.contains("-->")) {
-            line = line.substring(line.length)
-        }
-        if (line.contains("<img")) {
-            var src = line.substring(line.indexOf("src=\"") + 5)
-            src = src.substring(0, src.indexOf("\""))
-            Log.d("checking image files", line)
-            //            Log.d("against", src.toString());
-            val phList: List<Resource?> = ArrayList()
-            val bm = getBookImages(phList, src)
-            Log.d("more test", bm.toString())
-            val im = rootView!!.findViewById<ImageView>(R.id.image1)
-            im.setImageBitmap(bm)
-            //            Log.d("image set", "image set");
-        }
-        return line
-    }
 
     fun setStoryContent(fullText: StringBuilder?) {
         fullStoryView!!.text = fullText
