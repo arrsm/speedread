@@ -55,9 +55,6 @@ class EPubLibUtil {
             return book
         }
 
-        /*
-       trying to display images
-    */
         @JvmStatic
         fun getBitmapFromResources(resourcez: List<Resource?>?, imgHref: String, book: Book): Bitmap {
             val resources = book.resources.getResourcesByMediaTypes(bitmapTypes)
