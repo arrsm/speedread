@@ -9,3 +9,7 @@
 /build
 /captures
 .externalNativeBuild
+google-services.json
+tags.lock
+tags.ignore
+tags.temp
