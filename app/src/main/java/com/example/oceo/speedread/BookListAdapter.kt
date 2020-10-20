@@ -38,7 +38,7 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
     }
 
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
-        holder.textView.text = mDataset[position]
+        holder.textView.text = mDataset[position].replace("asset__", "")
         holder.textView.setOnClickListener {
             val value = mDataset[position]
             Log.d("ADAPTER", "onItemSelected: " + mDataset[position])
