@@ -272,29 +272,27 @@ class BookReaderFragment : Fragment() {
     }
 
     fun textSelection() {
-        /*
-        currentChunkView.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (!disposableReader.isDisposed()) {
-                    disposableReader.dispose();
-                } else {
-                    iterateWords();
-                }
-
-            }
-        });
-
-        // TODO incorporate text selection. this is not functional atm due to swipe replacing the touchlistenr
-        currentChunkView.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (MotionEvent.ACTION_UP == event.getAction()) {
-                    handleTextSelection();
-                }
-                return false;
-            }
-        });
-        */
+        //TODO
+//        currentChunkView.setOnClickListener(new View . OnClickListener () {
+//            public void onClick(View v) {
+//                if (!disposableReader.isDisposed()) {
+//                    disposableReader.dispose();
+//                } else {
+//                    iterateWords();
+//                }
+//
+//            }
+//        });
+//
+//        currentChunkView.setOnTouchListener(new View . OnTouchListener () {
+//            @Override
+//            public boolean onTouch(View v, MotionEvent event) {
+//                if (MotionEvent.ACTION_UP == event.getAction()) {
+//                    handleTextSelection();
+//                }
+//                return false;
+//            }
+//        });
     }
 
     fun moveToPrevSentence() {
@@ -353,7 +351,6 @@ class BookReaderFragment : Fragment() {
         currSentenceStart = startIdx + 1
     }
 
-    // can i make this logic more modular??
     fun displayTOC() {
         val tocRefs = exploreTOC(book!!)
         var TOCTitles = ArrayList<String>()
@@ -362,7 +359,6 @@ class BookReaderFragment : Fragment() {
         val adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, TOCTitles)
         dropdown!!.setAdapter(adapter)
 
-        // TODO maybe move this bit to the epublib utils
         val spineRefs = book!!.spine.spineReferences
         val currentSpineID = spineRefs[currentChapter].resourceId
         val currentToCIdx = mapSpineToTOC(currentSpineID, tocResourceIds!!) // find out if current chapter is in TOC
@@ -438,15 +434,10 @@ class BookReaderFragment : Fragment() {
         if (tokens != null && startIdx < tokens.size && tokens[startIdx].contains("”")) {
             startIdx += 1
         }
-
-//        List<String> words = tokens.subList(temp, startIdx);
-//        Log.d("the tokes", words.toString());
         return startIdx
     }
 
     fun buildBoldSentences(tokenList: ArrayList<String>?, startIdx: Int, endIdx: Int): ArrayList<StringBuilder> {
-        // TODO wish there was a better way to do this rather than building and holding o(n^2)
-        //  strings in the number of words
         var endIdx = endIdx
         if (endIdx > maxWordIdx) {
             endIdx = maxWordIdx
@@ -471,7 +462,6 @@ class BookReaderFragment : Fragment() {
         val sentencesEndIdx = getNextSentencesStartIdx(story, 1, currentWordIdx)
         displayStrs = buildBoldSentences(story, currSentenceStart, sentencesEndIdx)
 
-//        int tempWordIdx = this.currentWordIdx;
         val tempWordIdx = currSentenceStart
         var rangeObs: Observable<*> = Observable.range(tempWordIdx, sentencesEndIdx - currentWordIdx)
                 .concatMap { i: Any -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS) }
@@ -503,7 +493,6 @@ class BookReaderFragment : Fragment() {
         },
                 { e: Any? -> }
         ) {
-//                        Log.d("obs", "k do the next chunk");
             if (currentWordIdx < maxWordIdx) {
                 currSentenceIdx = 0
                 currSentenceStart = currentWordIdx
@@ -609,6 +598,7 @@ class BookReaderFragment : Fragment() {
             if (event.action == MotionEvent.ACTION_UP && autoIncrementWPM) {
                 Log.d(TAG, "touch up")
                 autoIncrementWPM = false
+                WPM_MS = WPMtoMS(WPM)
                 PrefsUtil.writeLongToPrefs(activity!!, WPM_KEY, WPM)
             }
             false
@@ -625,6 +615,8 @@ class BookReaderFragment : Fragment() {
             if (event.action == MotionEvent.ACTION_UP && autoDecrementWPM) {
 //                    Log.d(TAG, "touch up");
                 autoDecrementWPM = false
+                WPM_MS = WPMtoMS(WPM)
+                PrefsUtil.writeLongToPrefs(activity!!, WPM_KEY, WPM)
             }
             false
         })

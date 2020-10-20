@@ -61,12 +61,9 @@ class EPubLibUtil {
                     epubInputStream = FileInputStream(file.toString())
                 }
 
-                Log.d(TAG, "********the file is: " + file.toString())
-                Log.d(TAG, "********the file is: " + fName)
                 if (fName.contains(".epub")) {
                     book = EpubReader().readEpub(epubInputStream)
                 } else {
-
                     Log.d("GetBook", "Not an Epub");
                 }
             } catch (e: IOException) {
@@ -81,10 +78,6 @@ class EPubLibUtil {
             var data = "holder".toByteArray()
             for (ii in resources.indices) {
                 val z = resources[ii].href
-                //            Log.d("given: ", imgHref);
-//            Log.d("the href: ", z);
-//            Log.d("contains", String.valueOf(imgHref.contains(z)));
-//            Log.d("contains", String.valueOf(z.contains(imgHref)));
                 // it isnt clear which one will be larger
                 // oathbringer chpt 4 is an example of the first condition
                 // hyperian prologue is an example of seocnd
@@ -171,7 +164,6 @@ class EPubLibUtil {
      */
         @JvmStatic
         fun getTOCResourceIds(tocReferences: List<TOCReference>?, depth: Int, toc: ArrayList<String>): ArrayList<String> {
-            // TODO examine
             if (tocReferences == null) {
                 return toc
             }
@@ -181,8 +173,6 @@ class EPubLibUtil {
                     tocString.append("\t")
                 }
                 tocString.append(tocReference.title)
-                //            Log.i("epublib", tocString.toString());
-//            toc.add(tocString.toString());
                 toc.add(tocReference.resource.id) // resource Id
                 getTOCResourceIds(tocReference.children, depth + 1, toc)
             }
@@ -191,7 +181,6 @@ class EPubLibUtil {
 
         @JvmStatic
         fun getTOCTitles(tocReferences: List<TOCReference>?, depth: Int, toc: ArrayList<String>): ArrayList<String> {
-            // TODO examine
             if (tocReferences == null) {
                 return toc
             }

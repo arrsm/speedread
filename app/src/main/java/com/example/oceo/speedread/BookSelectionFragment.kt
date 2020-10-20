@@ -40,52 +40,22 @@ class BookSelectionFragment : Fragment() {
         super.onCreate(savedInstanceState)
         activity = getActivity()
         frag = this
-        val bundle = this.arguments
-        //TODO maybe remove this stuff
-//        this.chosenFilePath = bundle.getString("file_path");
-//        this.chosenFileName = SpeedReadUtilities.bookNameFromPath(this.chosenFilePath);
         bookList = PrefsUtil.readBooksFromPrefs(activity!!)
         bookList = (bookList + getDefaultEpubFiles()) as ArrayList<String?>
-        Log.d(TAG, "The booklist is: " + bookList.toString())
         displayList = bookNamesFromPath(bookList)
         selectionCallback = activity as MainActivity?
         removalCallback = activity as MainActivity?
-
-        getDefaultEpubFiles()
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         rootView = inflater.inflate(R.layout.book_selection, container, false)
-
-//        bookListView = rootView.findViewById(R.id.book_list);
-//        ArrayAdapter<String> adapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, displayList);
-//        bookListView.setAdapter(adapter);
-
-
-//        this.activity.setContentView(R.layout.book_selection);
         recyclerView = rootView!!.findViewById<View>(R.id.book_recycle_view) as RecyclerView
         layoutManager = LinearLayoutManager(activity)
         recyclerView!!.layoutManager = layoutManager
         mAdapter = BookListAdapter(displayList!!, bookList, activity!!)
         recyclerView!!.adapter = mAdapter
-
-//        ArrayAdapter<String> adapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, displayList);
-//        bookListView.setAdapter(adapter);
         setUpFileChoice() // TODO come up with a better name
-
-        /*
-        bookListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapter, View v, int position, long arg3) {
-                String value = (String) adapter.getItemAtPosition(position);
-                Log.d(TAG, "onItemSelected: " + bookList.get(position));
-                selectionCallback.sendFilePath(bookList.get(position));
-                // assuming string and if you want to get the value on click of list item
-                // do what you intend to do on click of listview row
-            }
-        });
-
-         */return rootView
+        return rootView
     }
 
     /* open files */
@@ -120,13 +90,10 @@ class BookSelectionFragment : Fragment() {
     }
 
     fun getDefaultEpubFiles(): ArrayList<String?> {
-        Log.d(TAG, "-------------getDefaultEpubs------------")
         val assets = context?.assets?.list("")
-        Log.d(TAG, assets?.size.toString())
         return assets?.map {
             "asset__" + it.toString()
-        } as ArrayList<String?>
-
+        }!!.filter { it.contains(".epub") } as ArrayList<String?>
     }
 
     interface SendChosenFile {
