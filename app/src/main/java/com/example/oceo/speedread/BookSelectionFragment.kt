@@ -18,7 +18,6 @@ import com.example.oceo.speedread.FileSelector.Companion.launchFileChooser
 import com.example.oceo.speedread.FileSelector.Companion.requestReadPermission
 import com.example.oceo.speedread.SpeedReadUtilities.Companion.bookNamesFromPath
 import com.example.oceo.speedread.SpeedReadUtilities.Companion.modifyFilePath
-import java.util.*
 import kotlin.collections.ArrayList
 
 class BookSelectionFragment : Fragment() {
@@ -36,6 +35,7 @@ class BookSelectionFragment : Fragment() {
     private var recyclerView: RecyclerView? = null
     private var mAdapter: RecyclerView.Adapter<*>? = null
     private var layoutManager: RecyclerView.LayoutManager? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         activity = getActivity()
@@ -45,9 +45,13 @@ class BookSelectionFragment : Fragment() {
 //        this.chosenFilePath = bundle.getString("file_path");
 //        this.chosenFileName = SpeedReadUtilities.bookNameFromPath(this.chosenFilePath);
         bookList = PrefsUtil.readBooksFromPrefs(activity!!)
+        bookList = (bookList + getDefaultEpubFiles()) as ArrayList<String?>
+        Log.d(TAG, "The booklist is: " + bookList.toString())
         displayList = bookNamesFromPath(bookList)
         selectionCallback = activity as MainActivity?
         removalCallback = activity as MainActivity?
+
+        getDefaultEpubFiles()
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -84,9 +88,7 @@ class BookSelectionFragment : Fragment() {
          */return rootView
     }
 
-    /*
-        open files
-     */
+    /* open files */
     fun setUpFileChoice() {
         fileChooseButton = rootView!!.findViewById(R.id.choose_file_button)
         fileChooseButton!!.setOnClickListener(View.OnClickListener {
@@ -117,11 +119,16 @@ class BookSelectionFragment : Fragment() {
         selectionCallback!!.sendFilePath(filePath)
     }
 
-    /*
-        callback interfaces - why are they defined here but implemented in main
-        https://stackoverflow.com/questions/18279302/how-do-i-perform-a-java-callback-between-classes
-        TODO - test implementing in another class as well as mainactivity and see if both implementors get triggerd
-     */
+    fun getDefaultEpubFiles(): ArrayList<String?> {
+        Log.d(TAG, "-------------getDefaultEpubs------------")
+        val assets = context?.assets?.list("")
+        Log.d(TAG, assets?.size.toString())
+        return assets?.map {
+            "asset__" + it.toString()
+        } as ArrayList<String?>
+
+    }
+
     interface SendChosenFile {
         fun sendFilePath(fPath: String?)
     }
@@ -129,4 +136,6 @@ class BookSelectionFragment : Fragment() {
     interface RemoveChosenFile {
         fun removeFile(fPath: String?)
     }
+
+
 }
