@@ -1,7 +1,9 @@
 package com.example.oceo.speedread
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.Log
 import nl.siegmann.epublib.domain.Book
 import nl.siegmann.epublib.domain.Resource
 import nl.siegmann.epublib.domain.TOCReference
@@ -14,6 +16,7 @@ import java.io.InputStream
 import java.util.*
 
 class EPubLibUtil {
+    private val TAG = "EPubLibUtil"
     private val testBook1Path = "storage/emulated/0/Books/MoonReader/Brandon Sanderson - Oathbringer_ Book Three of the Stormlight Archive-Tor Books (2017).epub"
     private fun getChapterTitleFromToc(chapter: Int, mBook: Book): String {
         // Is there no easier way to connect a TOCReference
@@ -36,18 +39,35 @@ class EPubLibUtil {
     }
 
     companion object {
+        private val TAG = "EPubLibUtil"
         var bitmapTypes = arrayOf(MediatypeService.PNG, MediatypeService.GIF, MediatypeService.JPG)
+
         @JvmStatic
-        fun getBook(fName: String?): Book? {
-            val file = File(fName)
+        fun getBook(fName: String?, context: Context): Book? {
+            var file: File? = null
+
+            if (!fName!!.contains("asset__")) {
+                file = File(fName)
+            }
+
             var book: Book? = null
             try {
-                val epubInputStream: InputStream = FileInputStream(file.toString())
-                //            Log.d("what is it", file.toString());
-                if (file.toString().contains(".epub")) {
+                val epubInputStream: InputStream
+                if (fName.contains("asset__")) {
+                    Log.d(TAG, "making in stream from asset")
+                    val fileDescriptor = context.assets.openFd(fName.replace("asset__", ""))
+                    epubInputStream = fileDescriptor.createInputStream()
+                } else {
+                    epubInputStream = FileInputStream(file.toString())
+                }
+
+                Log.d(TAG, "********the file is: " + file.toString())
+                Log.d(TAG, "********the file is: " + fName)
+                if (fName.contains(".epub")) {
                     book = EpubReader().readEpub(epubInputStream)
                 } else {
-//                Log.d("GetBook", "Not an Epub");
+
+                    Log.d("GetBook", "Not an Epub");
                 }
             } catch (e: IOException) {
                 e.printStackTrace()

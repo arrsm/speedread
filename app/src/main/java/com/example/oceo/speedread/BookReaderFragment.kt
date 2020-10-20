@@ -165,7 +165,6 @@ class BookReaderFragment : Fragment() {
         super.onPause()
     }
 
-
     private fun handleTextSelection() {
         if (currentChunkView == null) {
             return
@@ -180,7 +179,7 @@ class BookReaderFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         Log.d(TAG, "onCreateView")
         rootView = inflater.inflate(R.layout.book_reader, container, false)
-        book = getBook(chosenFilePath)
+        book = getBook(chosenFilePath, context!!)
         setupWPMControls()
         setupChapterControls(book)
         currentChunkView = rootView!!.findViewById(R.id.current_chunk)
@@ -353,7 +352,6 @@ class BookReaderFragment : Fragment() {
         val startIdx = getNextSentencesStartIdx(story, numSentences, currentWordIdx)
         currSentenceStart = startIdx + 1
     }
-
 
     // can i make this logic more modular??
     fun displayTOC() {
