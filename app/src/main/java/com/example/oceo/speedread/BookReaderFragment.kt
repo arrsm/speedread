@@ -175,6 +175,8 @@ class BookReaderFragment : Fragment() {
             displayTOC()
             setStoryTokens()
         }
+
+        // seek bar
         chapterSeekBar!!.max = maxWordIdx
         chapterSeekBar!!.min = 0
         chapterSeekBar!!.progress = currentWordIdx
@@ -325,12 +327,10 @@ class BookReaderFragment : Fragment() {
 
         val spineRefs = book!!.spine.spineReferences
         var currentSpineID: String
-        Log.d("CHECKING number of chapters", spineRefs.size.toString())
-//        Log.d("CHECKING"2, )
-
         if (currentChapter < spineRefs.size && currentChapter > 0) {
             currentSpineID = spineRefs[currentChapter].resourceId
         } else {
+            currentChapter = 0
             currentSpineID = spineRefs[0].resourceId
         }
         val currentToCIdx = mapSpineToTOC(currentSpineID, tocResourceIds!!) // find out if current chapter is in TOC
@@ -368,6 +368,7 @@ class BookReaderFragment : Fragment() {
         val tokens = getWordTokens(fullText.toString())
         if (tokens != null) {
             maxWordIdx = tokens.countTokens()
+            chapterSeekBar!!.max = maxWordIdx
             story = tokensToArrayList(tokens)
         }
     }
@@ -456,7 +457,8 @@ class BookReaderFragment : Fragment() {
                     chptProgressView!!.text = "$chptPercentageComplete%"
                 }
                 chapterSeekBar!!.progress = currentWordIdx
-                //                        Log.d("setting progress to ", String.valueOf(currentWordIdx));
+                Log.d("setting progress to ", currentWordIdx.toString());
+                Log.d("max is ", maxWordIdx.toString());
 //                        Log.d(TAG + "SUB", String.valueOf(wordIdx) + " / " + String.valueOf(this.maxWordIdx));
             } else {
                 Log.d("The OBS", "Is Out of Bounds")
@@ -492,7 +494,7 @@ class BookReaderFragment : Fragment() {
             }
         })
         lowerChapterButton!!.setOnClickListener(View.OnClickListener {
-            if (currentChapter >= 0) {
+            if (currentChapter > 0) {
                 currentChapter -= 1
                 if (book != null) {
                     bookDetails!![CHAPTER_KEY] = currentChapter.toString()
@@ -538,7 +540,7 @@ class BookReaderFragment : Fragment() {
         if (book != null) {
             val spine = book.spine
             Log.d("READING chapter: ", chapterNumber.toString())
-            chapterContents = getChapter(spine, chapterNumber + 1, book, rootView!!)
+            chapterContents = getChapter(spine, chapterNumber, book, rootView!!)
         } else {
             Log.d("readSampleChpt", "book is null")
         }
