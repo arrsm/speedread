@@ -147,6 +147,7 @@ class BookReaderFragment : Fragment() {
         setupWPMControls()
         setupChapterControls(book)
         currentChunkView = rootView!!.findViewById(R.id.current_chunk)
+        currentChunkView!!.movementMethod = ScrollingMovementMethod()
 
         //textSelection()
         handleSwipes()
@@ -165,7 +166,7 @@ class BookReaderFragment : Fragment() {
 
         textSelectionMenu = cTextSelectionMenu(currentChunkView!!)
         currentWordView = rootView!!.findViewById(R.id.current_word)
-        fullStoryView = rootView!!.findViewById(R.id.file_test)
+//        fullStoryView = rootView!!.findViewById(R.id.file_test)
         chapterSeekBar = rootView!!.findViewById(R.id.seekBar)
         chptProgressView = rootView!!.findViewById(R.id.chapter_progress_view)
 
@@ -216,25 +217,26 @@ class BookReaderFragment : Fragment() {
     }
 
     fun handleSwipes() {
-        currentChunkView!!.setOnTouchListener(object : OnSwipeTouchListener(activity) {
-            override fun onSwipeTop() {
-//                Toast.makeText(activity, "top", Toast.LENGTH_SHORT).show();
-            }
-
-            override fun onSwipeRight() {
-//                Toast.makeText(activity, "right", Toast.LENGTH_SHORT).show();
-                moveToPrevSentence()
-            }
-
-            override fun onSwipeLeft() {
-//                Toast.makeText(activity, "left", Toast.LENGTH_SHORT).show();
-                moveToNextSentence()
-            }
-
-            override fun onSwipeBottom() {
-//                Toast.makeText(activity, "bottom", Toast.LENGTH_SHORT).show();
-            }
-        })
+        // disable until logic to prevent overscrolling implemented
+//        currentChunkView!!.setOnTouchListener(object : OnSwipeTouchListener(activity) {
+//            override fun onSwipeTop() {
+////                Toast.makeText(activity, "top", Toast.LENGTH_SHORT).show();
+//            }
+//
+//            override fun onSwipeRight() {
+////                Toast.makeText(activity, "right", Toast.LENGTH_SHORT).show();
+//                moveToPrevSentence()
+//            }
+//
+//            override fun onSwipeLeft() {
+////                Toast.makeText(activity, "left", Toast.LENGTH_SHORT).show();
+//                moveToNextSentence()
+//            }
+//
+//            override fun onSwipeBottom() {
+////                Toast.makeText(activity, "bottom", Toast.LENGTH_SHORT).show();
+//            }
+//        })
     }
 
     fun textSelection() {
