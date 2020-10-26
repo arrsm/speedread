@@ -42,12 +42,12 @@
 
     </LinearLayout>
 
-    <ImageView
-        android:id="@+id/image1"
-        android:layout_width="match_parent"
-        android:layout_height="175dp"
-        android:layout_marginTop="5dp"
-        android:layout_marginBottom="5dp"></ImageView>
+<!--    <ImageView-->
+<!--        android:id="@+id/image1"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="175dp"-->
+<!--        android:layout_marginTop="5dp"-->
+<!--        android:layout_marginBottom="5dp"></ImageView>-->
     <!--        android:src="@drawable/common_google_signin_btn_icon_dark_focused" />-->
     <!--    android:background="@android:color/darker_gray"-->
 

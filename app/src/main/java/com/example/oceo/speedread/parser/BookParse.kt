@@ -69,8 +69,8 @@ private fun formatLine(line: String, rootView: View, book: Book): String {
         val phList: List<Resource?> = ArrayList()
         val bm = getBookImages(phList, src, book)
         Log.d("more test", bm.toString())
-        val im = rootView!!.findViewById<ImageView>(R.id.image1)
-        im.setImageBitmap(bm)
+//        val im = rootView!!.findViewById<ImageView>(R.id.image1)
+//        im.setImageBitmap(bm)
     }
     return line
 }
