@@ -3,11 +3,9 @@ package com.example.oceo.speedread
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.Handler
 import android.text.Html
-import android.text.Spanned
 import android.text.method.ScrollingMovementMethod
 import android.util.Log
 import android.view.LayoutInflater
@@ -21,7 +19,6 @@ import android.widget.AdapterView.OnItemSelectedListener
 import android.widget.SeekBar.OnSeekBarChangeListener
 import androidx.fragment.app.Fragment
 import com.example.oceo.speedread.EPubLibUtil.Companion.exploreTOC
-import com.example.oceo.speedread.EPubLibUtil.Companion.getBitmapFromResources
 import com.example.oceo.speedread.EPubLibUtil.Companion.getBook
 import com.example.oceo.speedread.EPubLibUtil.Companion.getTOCResourceIds
 import com.example.oceo.speedread.EPubLibUtil.Companion.getTOCTitles
@@ -33,51 +30,20 @@ import com.example.oceo.speedread.parser.getChapter
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
-import io.reactivex.functions.Function
 import nl.siegmann.epublib.domain.Book
-import nl.siegmann.epublib.domain.Resource
-import nl.siegmann.epublib.domain.Spine
-import java.io.BufferedReader
-import java.io.IOException
-import java.io.InputStream
-import java.io.InputStreamReader
 import java.util.*
 import java.util.concurrent.TimeUnit
 
 class BookReaderFragment : Fragment() {
-    /*
-    sometimes sentence scroll doesnt work..
-    long sentences can break the ui by overflowing to the point that the menu options become hidden
-    is the span method used in cTextSelect callback better than my sentence generations?
-    percentage read of chapter/book
-    indication for when reading is happening
-    keep track of start and end indexes to have better resume experience
-    make spine a dropdown so user can choose section?
-    move all epub related stuff to the epubutil class
-    move seekbar styling and stuff to a new xml file
-    programmable night/bright modes
-    set scrolling sentences based on finger swipes - test how fast android can build bold sentences
-    auto scroll to next section
-    show images in epub
-    file importer
-    bookmarks and notes
-    settings menu
-        hide progress /slider
-    override back to book selection action so new books added appear there
-    scroll left or right for next sentences
-    currsentenceIdx variable name is causing confusing and issues - update it
-    maybe modify main rx function to take display strs as a parameter instead of using the global?
-    err message if book is not epub
-
-    https://www.programcreek.com/java-api-examples/?api=nl.siegmann.epublib.domain.SpineReference
-    */
     var TAG = "BookReaderFragment"
     var activity: Activity? = null
     var frag: Fragment? = null
     var rootView: View? = null
     var book: Book? = null
+
     private var WPM: Long = 0
     private var WPM_MS: Long = 0
+
     private var sentenceDelay: Long = 0
     private var currSentenceStart = 0
     private var currSentenceIdx = 0
@@ -88,12 +54,9 @@ class BookReaderFragment : Fragment() {
     private val mTouchY = 0
     var firstTimeFlag = 0 // should spinner action be called
     private var chptPercentageComplete = 0f
-    protected var fullText // holds full story in memory
-            : StringBuilder? = null
-    private var story // fullText converted to arraylist
-            : ArrayList<String>? = null
-    private var displayStrs // crutch to display bolded words. would like to change
-            : ArrayList<StringBuilder>? = null
+    protected var fullText: StringBuilder? = null// holds full story in memory
+    private var story: ArrayList<String>? = null // fullText converted to arraylist
+    private var displayStrs: ArrayList<StringBuilder>? = null // crutch to display bolded words. would like to change
     private var tocResourceIds: ArrayList<String>? = null
     var bookDetails: HashMap<String?, String?>? = null
     protected var chosenFilePath: String? = null
@@ -107,6 +70,7 @@ class BookReaderFragment : Fragment() {
     private var currentChapterview: TextView? = null
     private var raiseChapterButton: Button? = null
     private var lowerChapterButton: Button? = null
+
     private var WPM_view: TextView? = null
     private var dropdown: Spinner? = null
     private var chapterSeekBar: SeekBar? = null
@@ -360,7 +324,15 @@ class BookReaderFragment : Fragment() {
         dropdown!!.setAdapter(adapter)
 
         val spineRefs = book!!.spine.spineReferences
-        val currentSpineID = spineRefs[currentChapter].resourceId
+        var currentSpineID: String
+        Log.d("CHECKING number of chapters", spineRefs.size.toString())
+//        Log.d("CHECKING"2, )
+
+        if (currentChapter < spineRefs.size && currentChapter > 0) {
+            currentSpineID = spineRefs[currentChapter].resourceId
+        } else {
+            currentSpineID = spineRefs[0].resourceId
+        }
         val currentToCIdx = mapSpineToTOC(currentSpineID, tocResourceIds!!) // find out if current chapter is in TOC
 
         // if not then dont set the ToC there
@@ -508,8 +480,8 @@ class BookReaderFragment : Fragment() {
         lowerChapterButton = rootView!!.findViewById(R.id.lower_chpt_btn)
         currentChapterview = rootView!!.findViewById(R.id.current_chapter)
         raiseChapterButton!!.setOnClickListener(View.OnClickListener {
-            currentChapter += 1
-            if (book != null) {
+            if (currentChapter < (book!!.spine.spineReferences.size - 1)) {
+                currentChapter += 1
                 disposeListener()
                 bookDetails!![CHAPTER_KEY] = currentChapter.toString()
                 PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
@@ -565,7 +537,8 @@ class BookReaderFragment : Fragment() {
         var chapterContents: String? = null
         if (book != null) {
             val spine = book.spine
-            chapterContents = getChapter(spine, chapterNumber, book, rootView!!)
+            Log.d("READING chapter: ", chapterNumber.toString())
+            chapterContents = getChapter(spine, chapterNumber + 1, book, rootView!!)
         } else {
             Log.d("readSampleChpt", "book is null")
         }

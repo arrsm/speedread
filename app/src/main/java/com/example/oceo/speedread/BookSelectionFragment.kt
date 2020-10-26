@@ -42,6 +42,7 @@ class BookSelectionFragment : Fragment() {
         frag = this
         bookList = PrefsUtil.readBooksFromPrefs(activity!!)
         bookList = (bookList + getDefaultEpubFiles()) as ArrayList<String?>
+        // remove sups...
         displayList = bookNamesFromPath(bookList)
         selectionCallback = activity as MainActivity?
         removalCallback = activity as MainActivity?
