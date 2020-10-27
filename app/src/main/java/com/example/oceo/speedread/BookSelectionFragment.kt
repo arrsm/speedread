@@ -42,7 +42,7 @@ class BookSelectionFragment : Fragment() {
         frag = this
         bookList = PrefsUtil.readBooksFromPrefs(activity!!)
         bookList = (bookList + getDefaultEpubFiles()) as ArrayList<String?>
-        // remove sups...
+        // remove dups...
         displayList = bookNamesFromPath(bookList)
         selectionCallback = activity as MainActivity?
         removalCallback = activity as MainActivity?

@@ -50,8 +50,6 @@ class BookReaderFragment : Fragment() {
     private var currentWordIdx = 0 // current word being iterated over = 0
     private var maxWordIdx = 0 // last word in chapter = 0
     private var currentChapter = 0
-    private val mTouchX = 0
-    private val mTouchY = 0
     var firstTimeFlag = 0 // should spinner action be called
     private var chptPercentageComplete = 0f
     protected var fullText: StringBuilder? = null// holds full story in memory
@@ -129,16 +127,6 @@ class BookReaderFragment : Fragment() {
         super.onPause()
     }
 
-    private fun handleTextSelection() {
-        if (currentChunkView == null) {
-            return
-        }
-        if (currentChunkView!!.hasSelection()) {
-            textSelectionMenu!!.setMetadata(chosenFileName, currentChapter, currSentenceStart)
-            currentChunkView!!.customSelectionActionModeCallback = textSelectionMenu
-        }
-        Log.d("text selection", "($mTouchX, $mTouchY)")
-    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         Log.d(TAG, "onCreateView")
