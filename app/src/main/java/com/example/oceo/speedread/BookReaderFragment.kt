@@ -97,7 +97,7 @@ class BookReaderFragment : Fragment() {
     }
 
     override fun onResume() {
-        Log.d(TAG, "bookreader fragment resumes")
+//        Log.d(TAG, "bookreader fragment resumes")
         if (book != null) {
             val tempChpt = bookDetails!![CHAPTER_KEY]
             val tempWord = bookDetails!![WORD_KEY]
@@ -113,7 +113,7 @@ class BookReaderFragment : Fragment() {
     }
 
     override fun onPause() {
-        Log.d(TAG, "onCreateView")
+//        Log.d(TAG, "onCreateView")
         disposeListener()
         bookDetails!![CHAPTER_KEY] = currentChapter.toString()
         bookDetails!![WORD_KEY] = currentWordIdx.toString()
@@ -124,7 +124,7 @@ class BookReaderFragment : Fragment() {
 
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        Log.d(TAG, "onCreateView")
+//        Log.d(TAG, "onCreateView")
         rootView = inflater.inflate(R.layout.book_reader, container, false)
         book = getBook(chosenFilePath, context!!)
         if (!(validateSection(currentChapter, 0, book!!.spine.spineReferences.size - 1))) {
@@ -271,7 +271,7 @@ class BookReaderFragment : Fragment() {
     }
 
     fun validateSection(section: Int, minVal: Int, maxVal: Int): Boolean {
-        Log.d("VALIDIATIOn", section.toString())
+//        Log.d("VALIDIATIOn", section.toString())
         return section in (minVal + 1) until maxVal
     }
 
@@ -302,11 +302,11 @@ class BookReaderFragment : Fragment() {
                     chptProgressView!!.text = "$chptPercentageComplete%"
                 }
                 chapterSeekBar!!.progress = currentWordIdx
-                Log.d("setting progress to ", currentWordIdx.toString());
-                Log.d("max is ", maxWordIdx.toString());
+//                Log.d("setting progress to ", currentWordIdx.toString());
+//                Log.d("max is ", maxWordIdx.toString());
 //                        Log.d(TAG + "SUB", String.valueOf(wordIdx) + " / " + String.valueOf(this.maxWordIdx));
             } else {
-                Log.d("The OBS", "Is Out of Bounds")
+//                Log.d("The OBS", "Is Out of Bounds")
                 Log.d(TAG, currentWordIdx.toString() + " / " + displayStrs!!.size.toString())
             }
         },
@@ -317,7 +317,7 @@ class BookReaderFragment : Fragment() {
                 currSentenceStart = currentWordIdx
                 iterateWords()
             } else {
-                Log.d("Observable", "No more sentences")
+//                Log.d("Observable", "No more sentences")
             }
         }
     }
@@ -387,10 +387,10 @@ class BookReaderFragment : Fragment() {
         var chapterContents: String? = null
         if (book != null) {
             val spine = book.spine
-            Log.d("READING chapter: ", chapterNumber.toString())
+//            Log.d("READING chapter: ", chapterNumber.toString())
             chapterContents = getChapter(spine, chapterNumber, book, rootView!!)
         } else {
-            Log.d("readSampleChpt", "book is null")
+//            Log.d("readSampleChpt", "book is null")
         }
         return chapterContents
     }
@@ -414,7 +414,7 @@ class BookReaderFragment : Fragment() {
         })
         raiseWPMButton!!.setOnTouchListener(OnTouchListener { v, event ->
             if (event.action == MotionEvent.ACTION_UP && autoIncrementWPM) {
-                Log.d(TAG, "touch up")
+//                Log.d(TAG, "touch up")
                 autoIncrementWPM = false
                 WPM_MS = WPMtoMS(WPM)
                 PrefsUtil.writeLongToPrefs(activity!!, WPM_KEY, WPM)

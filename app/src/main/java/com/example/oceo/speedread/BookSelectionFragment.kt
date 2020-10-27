@@ -66,7 +66,7 @@ class BookSelectionFragment : Fragment() {
             if (activity!!.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
                 launchFileChooser(frag)
             } else {
-                Log.d("Open file", "No File Permissions")
+//                Log.d("Open file", "No File Permissions")
                 requestReadPermission(activity)
             }
         })
@@ -79,7 +79,7 @@ class BookSelectionFragment : Fragment() {
         way tod o this
     */
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
-        Log.d("result", requestCode.toString())
+//        Log.d("result", requestCode.toString())
         when (requestCode) {
             1 -> if (resultCode == -1) {
                 val fileUri = data.data

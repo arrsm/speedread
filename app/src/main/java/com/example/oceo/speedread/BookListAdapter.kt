@@ -41,12 +41,12 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
         holder.textView.text = mDataset[position].replace("asset__", "")
         holder.textView.setOnClickListener {
             val value = mDataset[position]
-            Log.d("ADAPTER", "onItemSelected: " + mDataset[position])
+//            Log.d("ADAPTER", "onItemSelected: " + mDataset[position])
             selectionCallback.sendFilePath(bookList[position])
         }
         holder.deleteButton.setOnClickListener {
             val value = mDataset[position]
-            Log.d("ADAPTER", "deleting: " + mDataset[position])
+//            Log.d("ADAPTER", "deleting: " + mDataset[position])
             bookRemovalCallback.removeFile(bookList[position])
         }
     }
