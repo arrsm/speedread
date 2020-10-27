@@ -18,6 +18,7 @@ import java.util.*
 class EPubLibUtil {
     private val TAG = "EPubLibUtil"
     private val testBook1Path = "storage/emulated/0/Books/MoonReader/Brandon Sanderson - Oathbringer_ Book Three of the Stormlight Archive-Tor Books (2017).epub"
+
     private fun getChapterTitleFromToc(chapter: Int, mBook: Book): String {
         // Is there no easier way to connect a TOCReference
         // to an absolute spine index?
@@ -159,9 +160,6 @@ class EPubLibUtil {
             return -1
         }
 
-        /*
-
-     */
         @JvmStatic
         fun getTOCResourceIds(tocReferences: List<TOCReference>?, depth: Int, toc: ArrayList<String>): ArrayList<String> {
             if (tocReferences == null) {

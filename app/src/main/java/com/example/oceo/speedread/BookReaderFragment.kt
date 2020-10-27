@@ -85,7 +85,6 @@ class BookReaderFragment : Fragment() {
     private var autoDecrementWPM = false
     private val REPEAT_DELAY: Long = 50
     private val WPMUpdateHandler = Handler()
-    var textSelectionMenu: cTextSelectionMenu? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -137,10 +136,7 @@ class BookReaderFragment : Fragment() {
         currentChunkView = rootView!!.findViewById(R.id.current_chunk)
         currentChunkView!!.movementMethod = ScrollingMovementMethod()
 
-        //textSelection()
-//        handleSwipes()
 
-        /* maybe a good candidate to try to move to a new fragment? */
         pauseResumeBtn = rootView!!.findViewById(R.id.pause_resume)
         pauseResumeBtn!!.setOnClickListener(View.OnClickListener {
             if (!disposableReader!!.isDisposed) {
@@ -152,7 +148,6 @@ class BookReaderFragment : Fragment() {
             }
         })
 
-        textSelectionMenu = cTextSelectionMenu(currentChunkView!!)
         currentWordView = rootView!!.findViewById(R.id.current_word)
 //        fullStoryView = rootView!!.findViewById(R.id.file_test)
         chapterSeekBar = rootView!!.findViewById(R.id.seekBar)
@@ -166,7 +161,6 @@ class BookReaderFragment : Fragment() {
         }
 
         setupSeekbar()
-
         return rootView
     }
 
@@ -208,85 +202,14 @@ class BookReaderFragment : Fragment() {
         })
     }
 
-
-    fun textSelection() {
-        //TODO
-//        currentChunkView.setOnClickListener(new View . OnClickListener () {
-//            public void onClick(View v) {
-//                if (!disposableReader.isDisposed()) {
-//                    disposableReader.dispose();
-//                } else {
-//                    iterateWords();
-//                }
-//
-//            }
-//        });
-//
-//        currentChunkView.setOnTouchListener(new View . OnTouchListener () {
-//            @Override
-//            public boolean onTouch(View v, MotionEvent event) {
-//                if (MotionEvent.ACTION_UP == event.getAction()) {
-//                    handleTextSelection();
-//                }
-//                return false;
-//            }
-//        });
-    }
-
-    fun moveToPrevSentence() {
-        Log.d("moveToPrevSentence before: ", "curr: " + currSentenceStart.toString())
-        val prevSentenceStart = getSentenceStartIdx(currSentenceStart - 2)
-        Log.d("moveToPrevSentence after: ", "curr: $prevSentenceStart")
-        disposeListener()
-        currSentenceStart = prevSentenceStart
-        currentWordIdx = prevSentenceStart
-        currSentenceIdx = 0
-        val sentenceEndIdx = getNextSentencesStartIdx(story, 1, currentWordIdx)
-        val prevSentence = getStringFromTokenIndexes(prevSentenceStart, sentenceEndIdx)
-        currentChunkView!!.text = prevSentence
-        //        iterateWords();
-    }
-
     fun disposeListener() {
-        Log.d("disposing Listener", "START")
-        Log.d("disposing Listener", "currentWordIdx: " + currentWordIdx.toString())
-        Log.d("disposing Listener", "currentSentenceStart: " + currSentenceStart.toString())
-        Log.d("disposing Listener", "cur: " + currSentenceStart.toString())
+//        Log.d("disposing Listener", "START")
+//        Log.d("disposing Listener", "currentWordIdx: " + currentWordIdx.toString())
+//        Log.d("disposing Listener", "currentSentenceStart: " + currSentenceStart.toString())
+//        Log.d("disposing Listener", "cur: " + currSentenceStart.toString())
         if (disposableReader != null && !disposableReader!!.isDisposed) {
             disposableReader!!.dispose()
         }
-    }
-
-    fun moveToNextSentence() {
-        val nextSentenceStart = getNextSentencesStartIdx(story, 1, currentWordIdx)
-        Log.d("moveToPrevSentence before: ", "curr: " + currSentenceStart.toString())
-        val prevSentenceStart = getSentenceStartIdx(currSentenceStart - 2)
-        Log.d("moveToPrevSentence after: ", "curr: $prevSentenceStart")
-        disposeListener()
-        currSentenceStart = nextSentenceStart
-        currentWordIdx = nextSentenceStart
-        val sentenceEndIdx = getNextSentencesStartIdx(story, 1, nextSentenceStart)
-        val nextSentence = getStringFromTokenIndexes(nextSentenceStart, sentenceEndIdx)
-        currentChunkView!!.text = nextSentence
-        currSentenceIdx = 0
-        //        iterateWords();
-    }
-
-    fun getStringFromTokenIndexes(startIdx: Int, endIdx: Int): StringBuilder {
-        var temp = startIdx
-        val str = StringBuilder()
-        while (temp < endIdx) {
-            str.append(story!![temp] + " ")
-            temp++
-        }
-        return str
-    }
-
-    fun scrollSentences(numSentences: Int) {
-        //TODO testing
-        // average number of sentences in a page for page turn?
-        val startIdx = getNextSentencesStartIdx(story, numSentences, currentWordIdx)
-        currSentenceStart = startIdx + 1
     }
 
     fun displayTOC() {
@@ -353,15 +276,7 @@ class BookReaderFragment : Fragment() {
         return idx + 1
     }
 
-    fun getWordPositionInSentence(idx: Int): Int {
-        var idx = idx
-        var earlierTokenCount = 0
-        while (!story!![idx].contains(".") && idx > 0) {
-            idx -= 1
-            earlierTokenCount += 1
-        }
-        return 1.let { earlierTokenCount -= it; earlierTokenCount }
-    }
+
 
     fun getNextSentencesStartIdx(tokens: ArrayList<String>?, numSentences: Int, startIdx: Int): Int {
         var startIdx = startIdx
