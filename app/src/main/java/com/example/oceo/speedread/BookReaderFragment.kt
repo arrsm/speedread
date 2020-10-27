@@ -251,7 +251,6 @@ class BookReaderFragment : Fragment() {
                     iterateWords()
                 }
             }
-
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         })
     }

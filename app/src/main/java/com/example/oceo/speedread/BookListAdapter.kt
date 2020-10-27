@@ -14,7 +14,7 @@ import com.example.oceo.speedread.BookSelectionFragment.RemoveChosenFile
 import com.example.oceo.speedread.BookSelectionFragment.SendChosenFile
 import java.util.*
 
-class BookListAdapter(private val mDataset: ArrayList<String>, private val bookList: ArrayList<String?>, activity: Activity) : RecyclerView.Adapter<MyViewHolder>() {
+class BookListAdapter(private val mDataset: ArrayList<String>, private val bookList: List<String?>, activity: Activity) : RecyclerView.Adapter<MyViewHolder>() {
     private var selectionCallback: SendChosenFile
     private var bookRemovalCallback: RemoveChosenFile
 
