@@ -136,7 +136,6 @@ class BookReaderFragment : Fragment() {
         currentChunkView = rootView!!.findViewById(R.id.current_chunk)
         currentChunkView!!.movementMethod = ScrollingMovementMethod()
 
-
         pauseResumeBtn = rootView!!.findViewById(R.id.pause_resume)
         pauseResumeBtn!!.setOnClickListener(View.OnClickListener {
             if (!disposableReader!!.isDisposed) {
@@ -243,7 +242,10 @@ class BookReaderFragment : Fragment() {
                     disposeListener()
                     bookDetails!![CHAPTER_KEY] = currentChapter.toString()
                     PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
-                    currentChapterview!!.text = "Section: " + (currentChapter + 1).toString()
+                    val currSection = (currentChapter + 1).toString()
+
+                    currentChapterview!!.text = "Section: ${currSection}"
+
                     resetChapterGlobals()
                     setStoryTokens()
                     iterateWords()
@@ -275,7 +277,6 @@ class BookReaderFragment : Fragment() {
         }
         return idx + 1
     }
-
 
 
     fun getNextSentencesStartIdx(tokens: ArrayList<String>?, numSentences: Int, startIdx: Int): Int {
@@ -365,16 +366,18 @@ class BookReaderFragment : Fragment() {
     }
 
     fun setupChapterControls(book: Book?) {
+
+        val maxChapter = (book!!.spine.spineReferences.size)
         raiseChapterButton = rootView!!.findViewById(R.id.raise_chpt_button)
         lowerChapterButton = rootView!!.findViewById(R.id.lower_chpt_btn)
         currentChapterview = rootView!!.findViewById(R.id.current_chapter)
         raiseChapterButton!!.setOnClickListener(View.OnClickListener {
-            if (currentChapter < (book!!.spine.spineReferences.size - 1)) {
+            if (currentChapter <= maxChapter) {
                 currentChapter += 1
+                currentChapterview!!.setText("Section: ${currentChapter + 1}/${maxChapter}")
                 disposeListener()
                 bookDetails!![CHAPTER_KEY] = currentChapter.toString()
                 PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
-                currentChapterview!!.setText("Section: " + (currentChapter + 1).toString())
                 resetChapterGlobals()
                 setStoryTokens()
                 iterateWords()
@@ -383,18 +386,16 @@ class BookReaderFragment : Fragment() {
         lowerChapterButton!!.setOnClickListener(View.OnClickListener {
             if (currentChapter > 0) {
                 currentChapter -= 1
-                if (book != null) {
-                    bookDetails!![CHAPTER_KEY] = currentChapter.toString()
-                    PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
-                    currentChapterview!!.setText("Section: " + (currentChapter + 1).toString())
-                    disposeListener()
-                    resetChapterGlobals()
-                    setStoryTokens()
-                    iterateWords()
-                }
+                currentChapterview!!.setText("Section: ${currentChapter + 1}/${maxChapter}")
+                bookDetails!![CHAPTER_KEY] = currentChapter.toString()
+                PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
+                disposeListener()
+                resetChapterGlobals()
+                setStoryTokens()
+                iterateWords()
             }
         })
-        currentChapterview!!.text = "Section: " + (currentChapter + 1).toString()
+        currentChapterview!!.setText("Section: ${currentChapter + 1}/${maxChapter}")
     }
 
     fun resetChapterGlobals() {
@@ -434,11 +435,6 @@ class BookReaderFragment : Fragment() {
         return chapterContents
     }
 
-
-    fun setStoryContent(fullText: StringBuilder?) {
-        fullStoryView!!.text = fullText
-        fullStoryView!!.movementMethod = ScrollingMovementMethod()
-    }
 
     @SuppressLint("ClickableViewAccessibility")
     fun setupWPMControls() {

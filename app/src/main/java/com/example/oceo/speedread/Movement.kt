@@ -1,5 +1,9 @@
 package com.example.oceo.speedread
 
+import android.text.method.ScrollingMovementMethod
+import android.view.View
+import android.widget.TextView
+
 // TODO consider encapsulating movement logic here
 
 fun getWordPositionInSentence(idx: Int, story: ArrayList<String>?): Int {
@@ -28,4 +32,9 @@ fun scrollSentences(numSentences: Int) {
     // average number of sentences in a page for page turn?
 //    val startIdx = getNextSentencesStartIdx(story, numSentences, currentWordIdx)
 //    currSentenceStart = startIdx + 1
+}
+
+fun setStoryContent(fullText: StringBuilder?, fullStoryView: TextView) {
+    fullStoryView.text = fullText
+    fullStoryView.movementMethod = ScrollingMovementMethod()
 }
