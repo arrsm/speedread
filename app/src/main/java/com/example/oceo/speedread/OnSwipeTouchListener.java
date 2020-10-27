@@ -62,9 +62,12 @@ public class OnSwipeTouchListener implements OnTouchListener {
     }
 
     public void onSwipeRight() {
+//       Toast.makeText(activity, "right", Toast.LENGTH_SHORT).show();
+//        moveToPrevSentence()
     }
 
     public void onSwipeLeft() {
+//        moveToNextSentence()
     }
 
     public void onSwipeTop() {

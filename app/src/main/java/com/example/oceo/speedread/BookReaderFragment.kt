@@ -138,7 +138,7 @@ class BookReaderFragment : Fragment() {
         currentChunkView!!.movementMethod = ScrollingMovementMethod()
 
         //textSelection()
-        handleSwipes()
+//        handleSwipes()
 
         /* maybe a good candidate to try to move to a new fragment? */
         pauseResumeBtn = rootView!!.findViewById(R.id.pause_resume)
@@ -165,7 +165,12 @@ class BookReaderFragment : Fragment() {
             setStoryTokens()
         }
 
-        // seek bar
+        setupSeekbar()
+
+        return rootView
+    }
+
+    fun setupSeekbar() {
         chapterSeekBar!!.max = maxWordIdx
         chapterSeekBar!!.min = 0
         chapterSeekBar!!.progress = currentWordIdx
@@ -201,31 +206,8 @@ class BookReaderFragment : Fragment() {
                 iterateWords()
             }
         })
-        return rootView
     }
 
-    fun handleSwipes() {
-        // disable until logic to prevent overscrolling implemented
-//        currentChunkView!!.setOnTouchListener(object : OnSwipeTouchListener(activity) {
-//            override fun onSwipeTop() {
-////                Toast.makeText(activity, "top", Toast.LENGTH_SHORT).show();
-//            }
-//
-//            override fun onSwipeRight() {
-////                Toast.makeText(activity, "right", Toast.LENGTH_SHORT).show();
-//                moveToPrevSentence()
-//            }
-//
-//            override fun onSwipeLeft() {
-////                Toast.makeText(activity, "left", Toast.LENGTH_SHORT).show();
-//                moveToNextSentence()
-//            }
-//
-//            override fun onSwipeBottom() {
-////                Toast.makeText(activity, "bottom", Toast.LENGTH_SHORT).show();
-//            }
-//        })
-    }
 
     fun textSelection() {
         //TODO
