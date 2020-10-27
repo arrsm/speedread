@@ -45,7 +45,7 @@ class SpeedReadUtilities {
         same as bookNameFromPath but modifies all in arrayList
      */
         @JvmStatic
-        fun bookNamesFromPath(filePaths: ArrayList<String?>): ArrayList<String> {
+        fun bookNamesFromPath(filePaths: List<String?>): ArrayList<String> {
             val bookNames = ArrayList<String>()
             for (path in filePaths) {
                 val temp = bookNameFromPath(path!!)

@@ -26,7 +26,7 @@ class BookSelectionFragment : Fragment() {
     var frag: Fragment? = null
     var rootView: View? = null
     var bookListView: ListView? = null
-    private var bookList: ArrayList<String?> = ArrayList()
+    private var bookList: List<String?> = ArrayList()
     private var displayList: ArrayList<String>? = null
     var selectionCallback: SendChosenFile? = null
     var removalCallback: RemoveChosenFile? = null
@@ -41,8 +41,8 @@ class BookSelectionFragment : Fragment() {
         activity = getActivity()
         frag = this
         bookList = PrefsUtil.readBooksFromPrefs(activity!!)
-        bookList = (bookList + getDefaultEpubFiles()) as ArrayList<String?>
-        // remove dups...
+        bookList = (bookList + getDefaultEpubFiles()) as List<String?>
+        bookList = bookList.distinct().toList()
         displayList = bookNamesFromPath(bookList)
         selectionCallback = activity as MainActivity?
         removalCallback = activity as MainActivity?
