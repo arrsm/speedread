@@ -16,8 +16,8 @@ object PrefsUtil {
 
      */
     fun writeBookDetailsToPrefs(activity: Activity, bookName: String, bookDetails: HashMap<String?, String?>?) {
-        Log.d(TAG, "I want to write the following book details to prefs key: $bookName")
-        Log.d(TAG, bookDetails.toString())
+//        Log.d(TAG, "I want to write the following book details to prefs key: $bookName")
+//        Log.d(TAG, bookDetails.toString())
         val sharedPref = activity.getPreferences(Context.MODE_PRIVATE)
         val editor = sharedPref.edit()
         if (bookDetails != null) {
@@ -27,7 +27,7 @@ object PrefsUtil {
             editor.apply()
             editor.commit()
         } else {
-            Log.d(TAG, "null details, not written to prefs")
+//            Log.d(TAG, "null details, not written to prefs")
         }
     }
 
@@ -66,7 +66,7 @@ object PrefsUtil {
         /*
          * note full paths are kept so a click can just send what path to open
          */
-        Log.d("writing book to prefs", activity.toString())
+//        Log.d("writing book to prefs", activity.toString())
         val sharedPref = activity.getPreferences(Context.MODE_PRIVATE)
         val editor = sharedPref.edit()
         var currentBookList = readBooksFromPrefs(activity)
@@ -84,7 +84,7 @@ object PrefsUtil {
     }
 
     fun removeBookFromPrefs(activity: Activity, book: String?) {
-        Log.d("removing book from prefs", activity.toString())
+//        Log.d("removing book from prefs", activity.toString())
         val sharedPref = activity.getPreferences(Context.MODE_PRIVATE)
         val editor = sharedPref.edit()
         var currentBookList = readBooksFromPrefs(activity)

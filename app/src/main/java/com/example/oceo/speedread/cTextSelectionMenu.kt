@@ -17,7 +17,7 @@ class cTextSelectionMenu(var selectedView: TextView) : ActionMode.Callback {
     private var currentSection = 0
     private var sentenceStart = 0
     override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
-        Log.d(TAG, "onCreateActionMode")
+//        Log.d(TAG, "onCreateActionMode")
         val inflater = mode.menuInflater
         inflater.inflate(R.menu.text_selection_menu, menu)
         menu.removeItem(android.R.id.selectAll)
@@ -29,14 +29,14 @@ class cTextSelectionMenu(var selectedView: TextView) : ActionMode.Callback {
     }
 
     override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
-        Log.d(TAG, String.format("onActionItemClicked item=%s/%d", item.toString(), item.itemId))
+//        Log.d(TAG, String.format("onActionItemClicked item=%s/%d", item.toString(), item.itemId))
         val cs: CharacterStyle
         val start = selectedView.selectionStart
         val end = selectedView.selectionEnd
         val ssb = SpannableStringBuilder(selectedView.text)
         when (item.itemId) {
             R.id.bold -> {
-                Log.d(TAG, "hanlding the bold case")
+//                Log.d(TAG, "hanlding the bold case")
                 cs = StyleSpan(Typeface.BOLD)
                 ssb.setSpan(cs, start, end, 1)
                 selectedView.text = ssb
@@ -56,7 +56,7 @@ class cTextSelectionMenu(var selectedView: TextView) : ActionMode.Callback {
             }
             R.id.save -> {
                 // TODO need a way to get the book, currentSection. currentSentenceStart,
-                Log.d(TAG, "saving selection")
+//                Log.d(TAG, "saving selection")
                 val startIdx = selectedView.selectionStart
                 val endIdx = selectedView.selectionEnd
                 return true
