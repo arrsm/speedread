@@ -14,3 +14,5 @@ tags.lock
 tags.ignore
 tags.temp
 todolist.txt
+release
+release/*
