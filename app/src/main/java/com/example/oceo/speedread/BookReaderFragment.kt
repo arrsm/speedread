@@ -94,10 +94,6 @@ class BookReaderFragment : Fragment() {
         chosenFilePath = bundle!!.getString("file_path")
         chosenFileName = bookNameFromPath(chosenFilePath!!)
         setDefaultValues()
-        val text = activity!!.intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)
-        if (text != null) {
-            Log.d("play with text", text.toString())
-        }
     }
 
     override fun onResume() {
@@ -131,6 +127,9 @@ class BookReaderFragment : Fragment() {
         Log.d(TAG, "onCreateView")
         rootView = inflater.inflate(R.layout.book_reader, container, false)
         book = getBook(chosenFilePath, context!!)
+        if (!(validateSection(currentChapter, 0, book!!.spine.spineReferences.size - 1))) {
+            currentChapter = 0
+        }
         setupWPMControls()
         setupChapterControls(book)
         currentChunkView = rootView!!.findViewById(R.id.current_chunk)
@@ -148,14 +147,12 @@ class BookReaderFragment : Fragment() {
         })
 
         currentWordView = rootView!!.findViewById(R.id.current_word)
-//        fullStoryView = rootView!!.findViewById(R.id.file_test)
         chapterSeekBar = rootView!!.findViewById(R.id.seekBar)
         chptProgressView = rootView!!.findViewById(R.id.chapter_progress_view)
 
         if (book != null) {
             PrefsUtil.writeBookToPrefs(activity!!, chosenFilePath)
             tocResourceIds = getTOCResourceIds(exploreTOC(book!!), 0, ArrayList<String>())
-            displayTOC()
             setStoryTokens()
         }
 
@@ -209,50 +206,6 @@ class BookReaderFragment : Fragment() {
         if (disposableReader != null && !disposableReader!!.isDisposed) {
             disposableReader!!.dispose()
         }
-    }
-
-    fun displayTOC() {
-        val tocRefs = exploreTOC(book!!)
-        var TOCTitles = ArrayList<String>()
-        TOCTitles = getTOCTitles(tocRefs, 0, TOCTitles)
-        dropdown = rootView!!.findViewById(R.id.spinner1)
-        val adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, TOCTitles)
-        dropdown!!.setAdapter(adapter)
-
-        val spineRefs = book!!.spine.spineReferences
-        var currentSpineID: String
-        if (currentChapter < spineRefs.size && currentChapter > 0) {
-            currentSpineID = spineRefs[currentChapter].resourceId
-        } else {
-            currentChapter = 0
-            currentSpineID = spineRefs[0].resourceId
-        }
-        val currentToCIdx = mapSpineToTOC(currentSpineID, tocResourceIds!!) // find out if current chapter is in TOC
-
-        // if not then dont set the ToC there
-        if (currentToCIdx != -1) {
-            dropdown!!.setSelection(currentToCIdx)
-        }
-
-        dropdown!!.setOnItemSelectedListener(object : OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View, position: Int, id: Long) {
-                val selectedItem = tocResourceIds!![position]
-                if (++firstTimeFlag > 1) { // do not update on launch
-                    currentChapter = mapTOCToSpine(book!!, selectedItem)
-                    disposeListener()
-                    bookDetails!![CHAPTER_KEY] = currentChapter.toString()
-                    PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
-                    val currSection = (currentChapter + 1).toString()
-
-                    currentChapterview!!.text = "Section: ${currSection}"
-
-                    resetChapterGlobals()
-                    setStoryTokens()
-                    iterateWords()
-                }
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        })
     }
 
 
@@ -317,6 +270,11 @@ class BookReaderFragment : Fragment() {
         return displayStrs
     }
 
+    fun validateSection(section: Int, minVal: Int, maxVal: Int): Boolean {
+        Log.d("VALIDIATIOn", section.toString())
+        return section in (minVal + 1) until maxVal
+    }
+
 
     fun iterateWords() {
         val sentencesEndIdx = getNextSentencesStartIdx(story, 1, currentWordIdx)
@@ -371,7 +329,7 @@ class BookReaderFragment : Fragment() {
         lowerChapterButton = rootView!!.findViewById(R.id.lower_chpt_btn)
         currentChapterview = rootView!!.findViewById(R.id.current_chapter)
         raiseChapterButton!!.setOnClickListener(View.OnClickListener {
-            if (currentChapter <= maxChapter) {
+            if (currentChapter < maxChapter - 1) {
                 currentChapter += 1
                 currentChapterview!!.setText("Section: ${currentChapter + 1}/${maxChapter}")
                 disposeListener()
@@ -404,6 +362,8 @@ class BookReaderFragment : Fragment() {
     }
 
     fun setDefaultValues() {
+        // gets data stored in prefs and sets defaults if values are unreasonable
+//        val maxSection = book!!.spine.spineReferences.size
         val activityCopy = activity!!
         WPM = PrefsUtil.readLongFromPrefs(activityCopy, WPM_KEY)
         WPM_MS = WPMtoMS(WPM)
@@ -416,6 +376,7 @@ class BookReaderFragment : Fragment() {
         val tempWord = bookDetails!![WORD_KEY]
         val tempSentenceStart = bookDetails!![SENTENCE_START_KEY]
         currentChapter = if (tempChpt == null) 0 else Integer.valueOf(tempChpt)
+//        currentChapter = if (tempChpt == null || tempChpt.toInt() >= maxSection || tempChpt.toInt() < 0) 0 else Integer.valueOf(tempChpt)
         currentWordIdx = if (tempWord == null) 0 else Integer.valueOf(tempWord)
         currSentenceStart = if (tempSentenceStart == null) 0 else Integer.valueOf(tempSentenceStart)
         resetChapterGlobals()
