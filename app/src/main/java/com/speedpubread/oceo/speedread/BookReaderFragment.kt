@@ -26,6 +26,7 @@ import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import nl.siegmann.epublib.domain.Book
+import org.w3c.dom.Text
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -63,6 +64,7 @@ class BookReaderFragment : Fragment() {
     private var currentChapterview: TextView? = null
     private var raiseChapterButton: Button? = null
     private var lowerChapterButton: Button? = null
+    private var titleView: TextView? = null
 
     private var WPM_view: TextView? = null
     private var dropdown: Spinner? = null
@@ -121,6 +123,9 @@ class BookReaderFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
 //        Log.d(TAG, "onCreateView")
         rootView = inflater.inflate(R.layout.book_reader, container, false)
+        titleView = rootView!!.findViewById(R.id.item_title)
+        titleView!!.text = chosenFileName?.replace("asset__", "")
+
         book = getBook(chosenFilePath, context!!)
         if (!(validateSection(currentChapter, 0, book!!.spine.spineReferences.size - 1))) {
             currentChapter = 0

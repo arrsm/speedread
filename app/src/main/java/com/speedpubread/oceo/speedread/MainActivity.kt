@@ -90,7 +90,7 @@ class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         //https://developer.android.com/guide/topics/ui/menus.html
-        Log.d("main", "crating menu")
+//        Log.d("main", "crating menu")
         val inflater = menuInflater
         inflater.inflate(R.menu.settings_menu, menu)
         return true
