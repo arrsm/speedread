@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
 import android.os.Handler
-import android.text.Html
 import android.text.method.ScrollingMovementMethod
 import android.util.Log
 import android.view.LayoutInflater
@@ -22,12 +21,8 @@ import com.speedpubread.oceo.speedread.EPubLibUtil.Companion.getTOCResourceIds
 import com.speedpubread.oceo.speedread.SpeedReadUtilities.Companion.WPMtoMS
 import com.speedpubread.oceo.speedread.SpeedReadUtilities.Companion.bookNameFromPath
 import com.speedpubread.oceo.speedread.parser.getChapter
-import io.reactivex.Observable
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.Disposable
 import nl.siegmann.epublib.domain.Book
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 class BookReaderFragment : Fragment() {
     var TAG = "BookReaderFragment"
@@ -46,7 +41,6 @@ class BookReaderFragment : Fragment() {
     var bookDetails: HashMap<String?, String?>? = null
     protected var chosenFilePath: String? = null
     protected var chosenFileName: String? = null
-    var disposableReader: Disposable? = null
     val reader = Reader()
 
     // views
@@ -83,10 +77,6 @@ class BookReaderFragment : Fragment() {
         super.onCreate(savedInstanceState)
         activity = getActivity()
         frag = this
-        Log.d("READER test", reader.WPM.toString())
-        Log.d("READER test", reader.sentenceDelay.toString())
-        reader.sentenceDelay = 20
-        Log.d("READER test", reader.sentenceDelay.toString())
         val bundle = this.arguments
         chosenFilePath = bundle!!.getString("file_path")
         chosenFileName = bookNameFromPath(chosenFilePath!!)
@@ -99,18 +89,19 @@ class BookReaderFragment : Fragment() {
             val tempChpt = bookDetails!![CHAPTER_KEY]
             val tempWord = bookDetails!![WORD_KEY]
             val tempSentenceStart = bookDetails!![SENTENCE_START_KEY]
+            // TODO make fn to load this within the reader class
             reader.currentChapter = if (tempChpt == null) 0 else Integer.valueOf(tempChpt)
             reader.currentWordIdx = if (tempWord == null) 0 else Integer.valueOf(tempWord)
             reader.currSentenceStart = if (tempSentenceStart == null) 0 else Integer.valueOf(tempSentenceStart)
             if (firstTimeFlag == 0) {
-                iterateWords()
+                reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
             }
         }
         super.onResume()
     }
 
     override fun onPause() {
-        disposeListener()
+        reader.disposeListener()
         bookDetails!![CHAPTER_KEY] = reader.currentChapter.toString()
         bookDetails!![WORD_KEY] = reader.currentWordIdx.toString()
         bookDetails!![SENTENCE_START_KEY] = reader.currSentenceStart.toString()
@@ -135,12 +126,12 @@ class BookReaderFragment : Fragment() {
 
         pauseResumeBtn = rootView!!.findViewById(R.id.pause_resume)
         pauseResumeBtn!!.setOnClickListener(View.OnClickListener {
-            if (!disposableReader!!.isDisposed) {
+            if (!reader.disposableReader!!.isDisposed) {
                 pauseResumeBtn!!.setText(">")
-                disposableReader!!.dispose()
+                reader.disposeListener()
             } else {
                 pauseResumeBtn!!.setText("||")
-                iterateWords()
+                reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
             }
         })
 
@@ -177,7 +168,7 @@ class BookReaderFragment : Fragment() {
 
             override fun onStartTrackingTouch(seekBar: SeekBar) {
 //                Log.d(TAG, "seekBar start tracking touch");
-                disposeListener()
+                reader.disposeListener()
             }
 
             override fun onStopTrackingTouch(seekBar: SeekBar) {
@@ -192,21 +183,13 @@ class BookReaderFragment : Fragment() {
                 } else {
                     chptProgressView!!.setText("$chptPercentageComplete%")
                 }
-                iterateWords()
+//                iterateWords()
+                reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
             }
         })
     }
 
-    // TODO move this into its own class
-    fun disposeListener() {
-//        Log.d("disposing Listener", "START")
-//        Log.d("disposing Listener", "reader.currentWordIdx: " + currentWordIdx.toString())
-//        Log.d("disposing Listener", "currentSentenceStart: " + reader.currSentenceStart.toString())
-//        Log.d("disposing Listener", "cur: " + reader.currSentenceStart.toString())
-        if (disposableReader != null && !disposableReader!!.isDisposed) {
-            disposableReader!!.dispose()
-        }
-    }
+
 
     fun setStoryTokens() {
         // sets fullText (String containing entire chapter text)
@@ -229,96 +212,12 @@ class BookReaderFragment : Fragment() {
         return idx + 1
     }
 
-    fun getNextSentencesStartIdx(tokens: ArrayList<String>?, numSentences: Int, startIdx: Int): Int {
-        var startIdx = startIdx
-        var foundSentences = 0
-        val temp = startIdx
-        while (foundSentences < numSentences) {
-            while (startIdx < reader.maxWordIdx && (!tokens!![startIdx].contains(".")
-                            || tokens[startIdx].contains("?")
-                            || tokens[startIdx].contains("!"))) {
-                startIdx++
-            }
-            startIdx += 1
-            foundSentences += 1
-        }
-        if (tokens != null && startIdx < tokens.size && tokens[startIdx].contains("”")) {
-            startIdx += 1
-        }
-        return startIdx
-    }
-
-    fun buildBoldSentences(tokenList: ArrayList<String>?, startIdx: Int, endIdx: Int): ArrayList<StringBuilder> {
-        var endIdx = endIdx
-        if (endIdx > reader.maxWordIdx) {
-            endIdx = reader.maxWordIdx
-        }
-        val displayStrs = ArrayList<StringBuilder>()
-        for (targetWord in startIdx until endIdx) {
-            val formattedDisplayStr = StringBuilder()
-            for (i in startIdx until endIdx) {
-                if (targetWord == i) {
-                    formattedDisplayStr.append("<font color=\"gray\">" + tokenList!![i] + "</font> ")
-                } else {
-                    formattedDisplayStr.append(tokenList!![i] + " ")
-                }
-            }
-            displayStrs.add(formattedDisplayStr)
-        }
-        return displayStrs
-    }
 
     fun validateSection(section: Int, minVal: Int, maxVal: Int): Boolean {
 //        Log.d("VALIDIATIOn", section.toString())
         return section in (minVal + 1) until maxVal
     }
 
-
-    fun iterateWords() {
-        val sentencesEndIdx = getNextSentencesStartIdx(story, 1, reader.currentWordIdx)
-        displayStrs = buildBoldSentences(story, reader.currSentenceStart, sentencesEndIdx)
-
-        val tempWordIdx = reader.currSentenceStart
-        var rangeObs: Observable<*> = Observable.range(tempWordIdx, sentencesEndIdx - reader.currentWordIdx)
-                .concatMap { i: Any -> Observable.just(i).delay(WPM_MS, TimeUnit.MILLISECONDS) }
-
-        rangeObs = rangeObs.delay(reader.sentenceDelay, TimeUnit.MILLISECONDS) // delay at the end of the sentence
-        rangeObs = rangeObs.observeOn(AndroidSchedulers.mainThread())
-        disposableReader = rangeObs.subscribe({ wordIdx: Any? ->
-//                    Log.d("The OBS", String.valueOf(wordIdx) + " / " + String.valueOf(sentencesEndIdx));
-            if (reader.currSentenceIdx < displayStrs!!.size) {
-//                Log.d("The OBS", "Is IN of Bounds")
-//                Log.d(TAG, reader.currentWordIdx.toString() + " / " + displayStrs!!.size.toString())
-                currentChunkView!!.text = Html.fromHtml(displayStrs!![reader.currSentenceIdx].toString())
-                currentWordView!!.text = story!![reader.currentWordIdx]
-                reader.currSentenceIdx++
-                reader.currentWordIdx++
-                chptPercentageComplete = java.lang.Float.valueOf(reader.currentWordIdx.toFloat()) / java.lang.Float.valueOf(reader.maxWordIdx.toFloat()) * 100
-                if (chptPercentageComplete.toString().length > 3) {
-                    chptProgressView!!.text = chptPercentageComplete.toString().substring(0, 4) + "%"
-                } else {
-                    chptProgressView!!.text = "$chptPercentageComplete%"
-                }
-                chapterSeekBar!!.progress = reader.currentWordIdx
-//                Log.d("setting progress to ", reader.currentWordIdx.toString());
-//                Log.d("max is ", reader.maxWordIdx.toString());
-//                        Log.d(TAG + "SUB", String.valueOf(wordIdx) + " / " + String.valueOf(this.reader.maxWordIdx));
-            } else {
-//                Log.d("The OBS", "Is Out of Bounds")
-                Log.d(TAG, reader.currentWordIdx.toString() + " / " + displayStrs!!.size.toString())
-            }
-        },
-                { e: Any? -> }
-        ) {
-            if (reader.currentWordIdx < reader.maxWordIdx) {
-                reader.currSentenceIdx = 0
-                reader.currSentenceStart = reader.currentWordIdx
-                iterateWords()
-            } else {
-//                Log.d("Observable", "No more sentences")
-            }
-        }
-    }
 
     fun setupChapterControls(book: Book?) {
 
@@ -330,12 +229,14 @@ class BookReaderFragment : Fragment() {
             if (reader.currentChapter < maxChapter - 1) {
                 reader.currentChapter += 1
                 currentChapterview!!.setText("Section: ${reader.currentChapter + 1}/${maxChapter}")
-                disposeListener()
+//                disposeListener()
+                reader.disposeListener()
                 bookDetails!![CHAPTER_KEY] = reader.currentChapter.toString()
                 PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
                 resetChapterGlobals()
                 setStoryTokens()
-                iterateWords()
+                reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
+//                iterateWords()
             }
         })
         lowerChapterButton!!.setOnClickListener(View.OnClickListener {
@@ -344,10 +245,10 @@ class BookReaderFragment : Fragment() {
                 currentChapterview!!.setText("Section: ${reader.currentChapter + 1}/${maxChapter}")
                 bookDetails!![CHAPTER_KEY] = reader.currentChapter.toString()
                 PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
-                disposeListener()
+                reader.disposeListener()
                 resetChapterGlobals()
                 setStoryTokens()
-                iterateWords()
+                reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
             }
         })
         currentChapterview!!.setText("Section: ${reader.currentChapter + 1}/${maxChapter}")
