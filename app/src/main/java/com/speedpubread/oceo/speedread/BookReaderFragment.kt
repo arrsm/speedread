@@ -135,16 +135,13 @@ class BookReaderFragment : Fragment() {
             // sets fullText (String containing entire chapter text)
             // and calculates and sets story(ArrayList of each word in chapter)
             val tokens = getChapterTokensTokens()
-            if (tokens != null) {
-                story = tokensToArrayList(tokens)
-            }
+            story = tokensToArrayList(tokens!!)
             reader = Reader(story!!)
             setupWPMControls()
-            reader!!.maxWordIdx = tokens!!.countTokens()
+            reader!!.maxWordIdx = tokens.countTokens()
             setDefaultValues()
             setupChapterControls(book)
             setupSeekbar()
-//            chapterSeekBar!!.max = reader!!.maxWordIdx
         }
 
         if (!(validateSection(reader!!.currentChapter, 0, book!!.spine.spineReferences.size - 1))) {
