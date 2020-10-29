@@ -9,13 +9,15 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import java.util.concurrent.TimeUnit
 
-class Reader(var WPM: Long = 0,
-             var sentenceDelay: Long = 0,
-             var currSentenceStart: Int = 0,
-             var currSentenceIdx: Int = 0,
-             var currentWordIdx: Int = 0,
-             var maxWordIdx: Int = 0,
-             var currentChapter: Int = 0) {
+class Reader(
+        val story: ArrayList<String>,
+        var WPM: Long = 0,
+        var sentenceDelay: Long = 0,
+        var currSentenceStart: Int = 0,
+        var currSentenceIdx: Int = 0,
+        var currentWordIdx: Int = 0,
+        var maxWordIdx: Int = 0,
+        var currentChapter: Int = 0) {
 
     private val TAG = "Reader"
     var disposableReader: Disposable? = null
@@ -34,7 +36,7 @@ class Reader(var WPM: Long = 0,
         }
     }
 
-    fun iterateWords(story: ArrayList<String>, currentChunkView: TextView, currentWordView: TextView,
+    fun iterateWords(currentChunkView: TextView, currentWordView: TextView,
                      chptProgressView: TextView,
                      chapterSeekBar: SeekBar
     ) {
@@ -42,13 +44,13 @@ class Reader(var WPM: Long = 0,
         val displayStrs = buildBoldSentences(story, currSentenceStart, sentencesEndIdx)
         val tempWordIdx = currSentenceStart
 
-//        Log.d("OBSERVABLE", "--------------------OBS setup---------------------")
-//        Log.d("tempWordIdx", tempWordIdx.toString())
-//        Log.d("sentencesEndIdx", sentencesEndIdx.toString())
-//        Log.d("WPM_MS", SpeedReadUtilities.WPMtoMS(WPM).toString())
-//        Log.d("WPM", WPM.toString())
-//        Log.d("sentenceDelay", sentenceDelay.toString())
-//        Log.d("OBSERVABLE", "--------------------OBS-setup---------------------\n\n")
+        Log.d("OBSERVABLE", "--------------------OBS setup---------------------")
+        Log.d("tempWordIdx START", tempWordIdx.toString())
+        Log.d("sentencesEndIdx", sentencesEndIdx.toString())
+        Log.d("WPM_MS", SpeedReadUtilities.WPMtoMS(WPM).toString())
+        Log.d("WPM", WPM.toString())
+        Log.d("sentenceDelay", sentenceDelay.toString())
+        Log.d("OBSERVABLE", "--------------------OBS-setup---------------------\n\n")
 
         var rangeObs: Observable<*> = Observable.range(tempWordIdx, sentencesEndIdx - currentWordIdx)
                 .concatMap { i: Any ->
@@ -61,6 +63,7 @@ class Reader(var WPM: Long = 0,
 
         disposableReader = rangeObs.subscribe({ wordIdx: Any? ->
             Log.d("The OBS", wordIdx.toString() + " / " + sentencesEndIdx.toString());
+            Log.d("currSentenceIdx < displayStrs.sizse", "${currSentenceIdx} / ${displayStrs.size}")
             if (currSentenceIdx < displayStrs.size) {
                 Log.d("The OBS", "Is IN of Bounds")
                 Log.d(TAG, currentWordIdx.toString() + " / " + displayStrs.size.toString())
@@ -70,7 +73,7 @@ class Reader(var WPM: Long = 0,
                 currentWordIdx++
                 setSeekBarData(chptProgressView, chapterSeekBar)
             } else {
-//                Log.d("The OBS", "Is Out of Bounds")
+                Log.d("The OBS", "Is Out of Bounds")
                 Log.d(TAG, currentWordIdx.toString() + " / " + displayStrs.size.toString())
             }
         },
@@ -80,7 +83,7 @@ class Reader(var WPM: Long = 0,
             if (currentWordIdx < maxWordIdx) {
                 currSentenceIdx = 0
                 currSentenceStart = currentWordIdx
-                iterateWords(story, currentChunkView, currentWordView, chptProgressView, chapterSeekBar)
+                iterateWords(currentChunkView, currentWordView, chptProgressView, chapterSeekBar)
             }
         }
     }
@@ -93,6 +96,14 @@ class Reader(var WPM: Long = 0,
             chptProgressView.text = "$chapterCompleted%"
         }
         chapterSeekBar.progress = currentWordIdx
+    }
+
+    fun getSentenceStartIdx(idx: Int): Int {
+        var idx = idx
+        while (!story!![idx].contains(".") && idx > 0) {
+            idx -= 1
+        }
+        return idx + 1
     }
 
     fun getChapterPercentageComplete(): Float {
