@@ -41,7 +41,7 @@ class BookReaderFragment : Fragment() {
     var bookDetails: HashMap<String?, String?>? = null
     protected var chosenFilePath: String? = null
     protected var chosenFileName: String? = null
-    val reader = Reader()
+    lateinit var reader: Reader
 
     // views
     private var rootView: View? = null
@@ -80,51 +80,34 @@ class BookReaderFragment : Fragment() {
         val bundle = this.arguments
         chosenFilePath = bundle!!.getString("file_path")
         chosenFileName = bookNameFromPath(chosenFilePath!!)
-        setDefaultValues()
     }
-
-    override fun onResume() {
-//        Log.d(TAG, "bookreader fragment resumes")
-        if (book != null) {
-            val tempChpt = bookDetails!![CHAPTER_KEY]
-            val tempWord = bookDetails!![WORD_KEY]
-            val tempSentenceStart = bookDetails!![SENTENCE_START_KEY]
-            // TODO make fn to load this within the reader class
-            reader.currentChapter = if (tempChpt == null) 0 else Integer.valueOf(tempChpt)
-            reader.currentWordIdx = if (tempWord == null) 0 else Integer.valueOf(tempWord)
-            reader.currSentenceStart = if (tempSentenceStart == null) 0 else Integer.valueOf(tempSentenceStart)
-            if (firstTimeFlag == 0) {
-                reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
-            }
-        }
-        super.onResume()
-    }
-
-    override fun onPause() {
-        reader.disposeListener()
-        bookDetails!![CHAPTER_KEY] = reader.currentChapter.toString()
-        bookDetails!![WORD_KEY] = reader.currentWordIdx.toString()
-        bookDetails!![SENTENCE_START_KEY] = reader.currSentenceStart.toString()
-        PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
-        super.onPause()
-    }
-
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         rootView = inflater.inflate(R.layout.book_reader, container, false)
         titleView = rootView!!.findViewById(R.id.item_title)
-        titleView!!.text = chosenFileName?.replace("asset__", "")
+        currentChunkView = rootView!!.findViewById(R.id.current_chunk)
+        pauseResumeBtn = rootView!!.findViewById(R.id.pause_resume)
+        chapterSeekBar = rootView!!.findViewById(R.id.seekBar)
+        chptProgressView = rootView!!.findViewById(R.id.chapter_progress_view)
+        currentWordView = rootView!!.findViewById(R.id.current_word)
 
+        titleView!!.text = chosenFileName?.replace("asset__", "")
+        currentChunkView!!.movementMethod = ScrollingMovementMethod()
+
+        val storyDetails = getStoryDetails() // metadata about user pos in book
+        bookDetails = storyDetails
         book = getBook(chosenFilePath, context!!)
+
+        reader = Reader(activity = activity!!, bookDetails = storyDetails!!)
+
+        // validate chapter
         if (!(validateSection(reader.currentChapter, 0, book!!.spine.spineReferences.size - 1))) {
             reader.currentChapter = 0
         }
+
         setupWPMControls()
         setupChapterControls(book)
-        currentChunkView = rootView!!.findViewById(R.id.current_chunk)
-        currentChunkView!!.movementMethod = ScrollingMovementMethod()
 
-        pauseResumeBtn = rootView!!.findViewById(R.id.pause_resume)
         pauseResumeBtn!!.setOnClickListener(View.OnClickListener {
             if (!reader.disposableReader!!.isDisposed) {
                 pauseResumeBtn!!.setText(">")
@@ -135,10 +118,6 @@ class BookReaderFragment : Fragment() {
             }
         })
 
-        currentWordView = rootView!!.findViewById(R.id.current_word)
-        chapterSeekBar = rootView!!.findViewById(R.id.seekBar)
-        chptProgressView = rootView!!.findViewById(R.id.chapter_progress_view)
-
         if (book != null) {
             PrefsUtil.writeBookToPrefs(activity!!, chosenFilePath)
             tocResourceIds = getTOCResourceIds(exploreTOC(book!!), 0, ArrayList<String>())
@@ -148,6 +127,31 @@ class BookReaderFragment : Fragment() {
         setupSeekbar()
         return rootView
     }
+
+    override fun onResume() {
+        if (book != null) {
+            reader.loadDataFromPrefs()
+            if (firstTimeFlag == 0) {
+                reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
+            }
+        }
+        super.onResume()
+    }
+
+    override fun onPause() {
+        reader.disposeListener()
+        saveBookDetailsToPrefs()
+        super.onPause()
+    }
+
+    fun saveBookDetailsToPrefs() {
+        bookDetails!![CHAPTER_KEY] = reader.currentChapter.toString()
+        bookDetails!![WORD_KEY] = reader.currentWordIdx.toString()
+        bookDetails!![SENTENCE_START_KEY] = reader.currSentenceStart.toString()
+        reader.bookDetails = bookDetails!!
+        PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
+    }
+
 
     // TODO move to new class that will handle the seekbar
     fun setupSeekbar() {
@@ -190,11 +194,11 @@ class BookReaderFragment : Fragment() {
     }
 
 
-
     fun setStoryTokens() {
         // sets fullText (String containing entire chapter text)
         // and calculates and sets story(ArrayList of each word in chapter)
-        val chapter = readSampleChapter(book, reader.currentChapter)
+//        val chapter = readSampleChapter(book, reader.currentChapter)
+        val chapter = getChapter(book!!.spine, reader.currentChapter, book!!, rootView!!)
         fullText = StringBuilder(chapter!!)
         val tokens = getWordTokens(fullText.toString())
         if (tokens != null) {
@@ -212,12 +216,10 @@ class BookReaderFragment : Fragment() {
         return idx + 1
     }
 
-
     fun validateSection(section: Int, minVal: Int, maxVal: Int): Boolean {
 //        Log.d("VALIDIATIOn", section.toString())
         return section in (minVal + 1) until maxVal
     }
-
 
     fun setupChapterControls(book: Book?) {
 
@@ -229,14 +231,12 @@ class BookReaderFragment : Fragment() {
             if (reader.currentChapter < maxChapter - 1) {
                 reader.currentChapter += 1
                 currentChapterview!!.setText("Section: ${reader.currentChapter + 1}/${maxChapter}")
-//                disposeListener()
                 reader.disposeListener()
                 bookDetails!![CHAPTER_KEY] = reader.currentChapter.toString()
                 PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
-                resetChapterGlobals()
+                reader.resetChapter()
                 setStoryTokens()
                 reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
-//                iterateWords()
             }
         })
         lowerChapterButton!!.setOnClickListener(View.OnClickListener {
@@ -246,7 +246,7 @@ class BookReaderFragment : Fragment() {
                 bookDetails!![CHAPTER_KEY] = reader.currentChapter.toString()
                 PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
                 reader.disposeListener()
-                resetChapterGlobals()
+                reader.resetChapter()
                 setStoryTokens()
                 reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
             }
@@ -254,39 +254,15 @@ class BookReaderFragment : Fragment() {
         currentChapterview!!.setText("Section: ${reader.currentChapter + 1}/${maxChapter}")
     }
 
-    fun resetChapterGlobals() {
-        reader.currSentenceStart = 0
-        reader.currentWordIdx = 0
-        reader.currSentenceIdx = 0
-    }
 
-    fun setDefaultValues() {
-        // gets data stored in prefs and sets defaults if values are unreasonable
-        val activityCopy = activity!!
-        reader.WPM = PrefsUtil.readLongFromPrefs(activityCopy, WPM_KEY)
-        WPM_MS = WPMtoMS(reader.WPM)
-        reader.sentenceDelay = PrefsUtil.readLongFromPrefs(activityCopy, SENTENCE_DELAY_KEY)
-        bookDetails = PrefsUtil.readBookDetailsFromPrefs(activityCopy, chosenFileName) as HashMap<String?, String?>?
+    fun getStoryDetails(): HashMap<String?, String?>? {
+        // metadata about users book. eg currentchapter, current word etc from profs
+        var bookDetails = PrefsUtil.readBookDetailsFromPrefs(activity!!, chosenFileName) as HashMap<String?, String?>?
         if (bookDetails == null) {
             bookDetails = HashMap()
         }
-        val tempChpt = bookDetails!![CHAPTER_KEY]
-        val tempWord = bookDetails!![WORD_KEY]
-        val tempSentenceStart = bookDetails!![SENTENCE_START_KEY]
-
-        reader.currentChapter = if (tempChpt == null) 0 else Integer.valueOf(tempChpt)
-        reader.currentWordIdx = if (tempWord == null) 0 else Integer.valueOf(tempWord)
-        reader.currSentenceStart = if (tempSentenceStart == null) 0 else Integer.valueOf(tempSentenceStart)
-        resetChapterGlobals()
+        return bookDetails
     }
-
-    fun readSampleChapter(book: Book?, chapterNumber: Int): String? {
-        var chapterContents: String? = null
-        val spine = book!!.spine
-        chapterContents = getChapter(spine, chapterNumber, book, rootView!!)
-        return chapterContents
-    }
-
 
     @SuppressLint("ClickableViewAccessibility")
     fun setupWPMControls() {

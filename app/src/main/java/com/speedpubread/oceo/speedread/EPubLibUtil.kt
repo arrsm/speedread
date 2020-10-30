@@ -54,12 +54,12 @@ class EPubLibUtil {
             var book: Book? = null
             try {
                 val epubInputStream: InputStream
-                if (fName.contains("asset__")) {
-                    Log.d(TAG, "making in stream from asset")
+                epubInputStream = if (fName.contains("asset__")) {
+//                    Log.d(TAG, "making in stream from asset")
                     val fileDescriptor = context.assets.openFd(fName.replace("asset__", ""))
-                    epubInputStream = fileDescriptor.createInputStream()
+                    fileDescriptor.createInputStream()
                 } else {
-                    epubInputStream = FileInputStream(file.toString())
+                    FileInputStream(file.toString())
                 }
 
                 if (fName.contains(".epub")) {
