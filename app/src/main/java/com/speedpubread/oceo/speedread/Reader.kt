@@ -1,5 +1,6 @@
 package com.speedpubread.oceo.speedread
 
+import android.app.Activity
 import android.text.Html
 import android.util.Log
 import android.widget.SeekBar
@@ -7,6 +8,7 @@ import android.widget.TextView
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
+import java.util.HashMap
 import java.util.concurrent.TimeUnit
 
 class Reader(var WPM: Long = 0,
@@ -15,15 +17,45 @@ class Reader(var WPM: Long = 0,
              var currSentenceIdx: Int = 0,
              var currentWordIdx: Int = 0,
              var maxWordIdx: Int = 0,
-             var currentChapter: Int = 0) {
+             var currentChapter: Int = 0,
+             activity: Activity,
+             var bookDetails: HashMap<String?, String?>
+) {
 
     private val TAG = "Reader"
     var disposableReader: Disposable? = null
 
+    val CHAPTER_KEY = "chapter"
+    val WORD_KEY = "page"
+    val SENTENCE_START_KEY = "sentence_start"
+    val WPM_KEY = "wpm"
+    val SENTENCE_DELAY_KEY = "sentence_delay"
+
+
     init {
+        WPM = PrefsUtil.readLongFromPrefs(activity, WPM_KEY)
+        sentenceDelay = PrefsUtil.readLongFromPrefs(activity, SENTENCE_DELAY_KEY)
+        loadDataFromPrefs()
     }
 
-    // TODO move this into its own class
+    fun loadDataFromPrefs() {
+        val tempChpt = bookDetails[CHAPTER_KEY]
+        val tempWord = bookDetails[WORD_KEY]
+        val tempSentenceStart = bookDetails[SENTENCE_START_KEY]
+
+        currentChapter = if (tempChpt == null) 0 else Integer.valueOf(tempChpt)
+        currentWordIdx = if (tempWord == null) 0 else Integer.valueOf(tempWord)
+        currSentenceStart = if (tempSentenceStart == null) 0 else Integer.valueOf(tempSentenceStart)
+    }
+
+
+    fun validateSection(section: Int, minVal: Int, maxVal: Int): Boolean {
+        // TODO test cases
+//        Log.d("VALIDIATIOn", section.toString())
+        return section in (minVal + 1) until maxVal
+    }
+
+
     fun disposeListener() {
 //        Log.d("disposing Listener", "START")
 //        Log.d("disposing Listener", "reader.currentWordIdx: " + currentWordIdx.toString())
@@ -135,5 +167,11 @@ class Reader(var WPM: Long = 0,
             displayStrs.add(formattedDisplayStr)
         }
         return displayStrs
+    }
+
+    fun resetChapter() {
+        currSentenceStart = 0
+        currentWordIdx = 0
+        currSentenceIdx = 0
     }
 }
