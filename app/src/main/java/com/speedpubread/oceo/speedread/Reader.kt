@@ -19,7 +19,7 @@ class Reader(var WPM: Long = 0,
              var maxWordIdx: Int = 0,
              var currentChapter: Int = 0,
              activity: Activity,
-             var bookDetails: HashMap<String?, String?>
+             var bookDetails: HashMap<String?, String?>,
 ) {
 
     private val TAG = "Reader"
@@ -167,6 +167,14 @@ class Reader(var WPM: Long = 0,
             displayStrs.add(formattedDisplayStr)
         }
         return displayStrs
+    }
+
+    fun getSentenceStartIdx(idx: Int, story: ArrayList<String>): Int {
+        var idx = idx
+        while (!story[idx].contains(".") && idx > 0) {
+            idx -= 1
+        }
+        return idx + 1
     }
 
     fun resetChapter() {
