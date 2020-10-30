@@ -3,6 +3,7 @@ package com.speedpubread.oceo.speedread
 import android.app.Activity
 import android.text.Html
 import android.util.Log
+import android.view.View
 import android.widget.SeekBar
 import android.widget.TextView
 import io.reactivex.Observable
@@ -20,9 +21,16 @@ class Reader(var WPM: Long = 0,
              var currentChapter: Int = 0,
              activity: Activity,
              var bookDetails: HashMap<String?, String?>,
+             rootView: View,
 ) {
 
     private val TAG = "Reader"
+
+    val currentChunkView: TextView = rootView.findViewById(R.id.current_chunk)
+    val currentWordView: TextView = rootView.findViewById(R.id.current_word)
+    val chptProgressView: TextView = rootView.findViewById(R.id.chapter_progress_view)
+    val chapterSeeker: SeekBar = rootView.findViewById(R.id.seekBar)
+
     var disposableReader: Disposable? = null
 
     val CHAPTER_KEY = "chapter"
@@ -30,22 +38,12 @@ class Reader(var WPM: Long = 0,
     val SENTENCE_START_KEY = "sentence_start"
     val WPM_KEY = "wpm"
     val SENTENCE_DELAY_KEY = "sentence_delay"
+    var chapter: ArrayList<String>? = null
 
 
     init {
         WPM = PrefsUtil.readLongFromPrefs(activity, WPM_KEY)
         sentenceDelay = PrefsUtil.readLongFromPrefs(activity, SENTENCE_DELAY_KEY)
-        loadDataFromPrefs()
-    }
-
-    fun loadDataFromPrefs() {
-        val tempChpt = bookDetails[CHAPTER_KEY]
-        val tempWord = bookDetails[WORD_KEY]
-        val tempSentenceStart = bookDetails[SENTENCE_START_KEY]
-
-        currentChapter = if (tempChpt == null) 0 else Integer.valueOf(tempChpt)
-        currentWordIdx = if (tempWord == null) 0 else Integer.valueOf(tempWord)
-        currSentenceStart = if (tempSentenceStart == null) 0 else Integer.valueOf(tempSentenceStart)
     }
 
 
@@ -54,7 +52,6 @@ class Reader(var WPM: Long = 0,
 //        Log.d("VALIDIATIOn", section.toString())
         return section in (minVal + 1) until maxVal
     }
-
 
     fun disposeListener() {
 //        Log.d("disposing Listener", "START")
@@ -66,12 +63,9 @@ class Reader(var WPM: Long = 0,
         }
     }
 
-    fun iterateWords(story: ArrayList<String>, currentChunkView: TextView, currentWordView: TextView,
-                     chptProgressView: TextView,
-                     chapterSeekBar: SeekBar
-    ) {
-        val sentencesEndIdx = getNextSentencesStartIdx(story, 1, currentWordIdx)
-        val displayStrs = buildBoldSentences(story, currSentenceStart, sentencesEndIdx)
+    fun iterateWords() {
+        val sentencesEndIdx = getNextSentencesStartIdx(chapter, 1, currentWordIdx)
+        val displayStrs = buildBoldSentences(chapter, currSentenceStart, sentencesEndIdx)
         val tempWordIdx = currSentenceStart
 
 //        Log.d("OBSERVABLE", "--------------------OBS setup---------------------")
@@ -97,10 +91,10 @@ class Reader(var WPM: Long = 0,
                 Log.d("The OBS", "Is IN of Bounds")
                 Log.d(TAG, currentWordIdx.toString() + " / " + displayStrs.size.toString())
                 currentChunkView.text = Html.fromHtml(displayStrs[currSentenceIdx].toString())
-                currentWordView.text = story[currentWordIdx]
+                currentWordView.text = chapter!![currentWordIdx]
                 currSentenceIdx++
                 currentWordIdx++
-                setSeekBarData(chptProgressView, chapterSeekBar)
+                setSeekBarData(chptProgressView, chapterSeeker)
             } else {
 //                Log.d("The OBS", "Is Out of Bounds")
                 Log.d(TAG, currentWordIdx.toString() + " / " + displayStrs.size.toString())
@@ -112,7 +106,7 @@ class Reader(var WPM: Long = 0,
             if (currentWordIdx < maxWordIdx) {
                 currSentenceIdx = 0
                 currSentenceStart = currentWordIdx
-                iterateWords(story, currentChunkView, currentWordView, chptProgressView, chapterSeekBar)
+                iterateWords()
             }
         }
     }
@@ -177,9 +171,13 @@ class Reader(var WPM: Long = 0,
         return idx + 1
     }
 
-    fun resetChapter() {
+    fun loadChapter(chapter: ArrayList<String>) {
+        disposeListener()
+        this.chapter = chapter
         currSentenceStart = 0
         currentWordIdx = 0
         currSentenceIdx = 0
+        iterateWords()
     }
+
 }
