@@ -25,7 +25,7 @@ class ChapterControls(val activity: Activity,
                 reader.disposeListener()
                 bookDetails[CHAPTER_KEY] = reader.currentChapter.toString()
                 PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails)
-                reader.resetChapter()
+//                reader.nextChapter()
 //                setStoryTokens()
 //                reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
             }
@@ -37,7 +37,7 @@ class ChapterControls(val activity: Activity,
                 bookDetails[CHAPTER_KEY] = reader.currentChapter.toString()
                 PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, bookDetails)
                 reader.disposeListener()
-                reader.resetChapter()
+//                reader.resetChapter()
 //                setStoryTokens()
 //                reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
             }
