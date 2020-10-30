@@ -23,6 +23,7 @@ import com.speedpubread.oceo.speedread.SpeedReadUtilities.Companion.bookNameFrom
 import com.speedpubread.oceo.speedread.parser.getChapter
 import nl.siegmann.epublib.domain.Book
 import java.util.*
+import kotlin.collections.HashMap
 
 class BookReaderFragment : Fragment() {
     var TAG = "BookReaderFragment"
@@ -31,17 +32,17 @@ class BookReaderFragment : Fragment() {
 
     // logic globals
     var book: Book? = null
-    private var WPM_MS: Long = 0
     var firstTimeFlag = 0 // should spinner action be called
     private var chptPercentageComplete = 0f
     protected var fullText: StringBuilder? = null// holds full story in memory
     private var story: ArrayList<String>? = null // fullText converted to arraylist
-    private var displayStrs: ArrayList<StringBuilder>? = null // crutch to display bolded words. would like to change
     private var tocResourceIds: ArrayList<String>? = null
     var bookDetails: HashMap<String?, String?>? = null
     protected var chosenFilePath: String? = null
     protected var chosenFileName: String? = null
     lateinit var reader: Reader
+    lateinit var wpm: WPM
+    lateinit var seeker: Seeker
 
     // views
     private var rootView: View? = null
@@ -54,7 +55,6 @@ class BookReaderFragment : Fragment() {
     private var raiseChapterButton: Button? = null
     private var lowerChapterButton: Button? = null
     private var titleView: TextView? = null
-    private var WPM_view: TextView? = null
     private var dropdown: Spinner? = null
     private var chapterSeekBar: SeekBar? = null
     private var chptProgressView: TextView? = null
@@ -80,6 +80,7 @@ class BookReaderFragment : Fragment() {
         val bundle = this.arguments
         chosenFilePath = bundle!!.getString("file_path")
         chosenFileName = bookNameFromPath(chosenFilePath!!)
+        PrefsUtil.writeBookToPrefs(activity!!, chosenFilePath)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -99,14 +100,23 @@ class BookReaderFragment : Fragment() {
         book = getBook(chosenFilePath, context!!)
 
         reader = Reader(activity = activity!!, bookDetails = storyDetails!!)
+        wpm = WPM(activity!!, rootView!!, reader)
+        wpm.setupWPMControls()
+//        setupWPMControls()
+        setStoryTokens()
+
+        setupChapterControls(book)
+
+//        setupSeekbar()
+        seeker = Seeker(rootView!!, reader, story!!)
+        seeker.setupSeekbar()
+
 
         // validate chapter
-        if (!(validateSection(reader.currentChapter, 0, book!!.spine.spineReferences.size - 1))) {
-            reader.currentChapter = 0
-        }
+//        if (!(validateSection(reader.currentChapter, 0, book!!.spine.spineReferences.size - 1))) {
+//            reader.currentChapter = 0
+//        }
 
-        setupWPMControls()
-        setupChapterControls(book)
 
         pauseResumeBtn!!.setOnClickListener(View.OnClickListener {
             if (!reader.disposableReader!!.isDisposed) {
@@ -117,18 +127,15 @@ class BookReaderFragment : Fragment() {
                 reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
             }
         })
+        tocResourceIds = getTOCResourceIds(exploreTOC(book!!), 0, ArrayList<String>())
 
-        if (book != null) {
-            PrefsUtil.writeBookToPrefs(activity!!, chosenFilePath)
-            tocResourceIds = getTOCResourceIds(exploreTOC(book!!), 0, ArrayList<String>())
-            setStoryTokens()
-        }
 
-        setupSeekbar()
         return rootView
     }
 
     override fun onResume() {
+        Log.d("BookReaderFragment", "On Resume")
+//        Log.d("story", story.toString())
         if (book != null) {
             reader.loadDataFromPrefs()
             if (firstTimeFlag == 0) {
@@ -198,9 +205,13 @@ class BookReaderFragment : Fragment() {
         // sets fullText (String containing entire chapter text)
         // and calculates and sets story(ArrayList of each word in chapter)
 //        val chapter = readSampleChapter(book, reader.currentChapter)
+        Log.d("setstorytokens", "setting the stories tokens")
+
+        // TODO raise chapter if there are no contents
         val chapter = getChapter(book!!.spine, reader.currentChapter, book!!, rootView!!)
         fullText = StringBuilder(chapter!!)
         val tokens = getWordTokens(fullText.toString())
+        Log.d("the tokens", tokens.toString())
         if (tokens != null) {
             reader.maxWordIdx = tokens.countTokens()
             chapterSeekBar!!.max = reader.maxWordIdx
@@ -257,13 +268,11 @@ class BookReaderFragment : Fragment() {
 
     fun getStoryDetails(): HashMap<String?, String?>? {
         // metadata about users book. eg currentchapter, current word etc from profs
-        var bookDetails = PrefsUtil.readBookDetailsFromPrefs(activity!!, chosenFileName) as HashMap<String?, String?>?
-        if (bookDetails == null) {
-            bookDetails = HashMap()
-        }
-        return bookDetails
+        return PrefsUtil.readBookDetailsFromPrefs(activity!!, chosenFileName)?.let { it }
+                ?: HashMap()
     }
 
+    /*
     @SuppressLint("ClickableViewAccessibility")
     fun setupWPMControls() {
         raiseWPMButton = rootView!!.findViewById(R.id.raise_wpm_button)
@@ -284,7 +293,6 @@ class BookReaderFragment : Fragment() {
             if (event.action == MotionEvent.ACTION_UP && autoIncrementWPM) {
 //                Log.d(TAG, "touch up")
                 autoIncrementWPM = false
-                WPM_MS = WPMtoMS(reader.WPM)
                 PrefsUtil.writeLongToPrefs(activity!!, WPM_KEY, reader.WPM)
             }
             false
@@ -301,7 +309,6 @@ class BookReaderFragment : Fragment() {
             if (event.action == MotionEvent.ACTION_UP && autoDecrementWPM) {
 //                    Log.d(TAG, "touch up");
                 autoDecrementWPM = false
-                WPM_MS = WPMtoMS(reader.WPM)
                 PrefsUtil.writeLongToPrefs(activity!!, WPM_KEY, reader.WPM)
             }
             false
@@ -334,6 +341,8 @@ class BookReaderFragment : Fragment() {
             }
         }
     }
+
+     */
 
     companion object {
         fun getWordTokens(words: String?): StringTokenizer? {
