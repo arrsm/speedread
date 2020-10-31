@@ -9,7 +9,6 @@ import android.widget.TextView
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
-import java.util.HashMap
 import java.util.concurrent.TimeUnit
 
 class Reader(var WPM: Long = 0,
