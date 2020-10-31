@@ -17,6 +17,7 @@ import com.speedpubread.oceo.speedread.SpeedReadUtilities.Companion.bookNameFrom
 import com.speedpubread.oceo.speedread.parser.getChapter
 import nl.siegmann.epublib.domain.Book
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
 class BookReaderFragment : Fragment() {
@@ -39,7 +40,6 @@ class BookReaderFragment : Fragment() {
 
     // views
     lateinit var rootView: View
-    private var currentWordView: TextView? = null
     private var currentChunkView: TextView? = null
     private var titleView: TextView? = null
     private var chapterSeekBar: SeekBar? = null
@@ -67,7 +67,6 @@ class BookReaderFragment : Fragment() {
         currentChunkView = rootView.findViewById(R.id.current_chunk)
         pauseResumeBtn = rootView.findViewById(R.id.pause_resume)
         chapterSeekBar = rootView.findViewById(R.id.seekBar)
-        currentWordView = rootView.findViewById(R.id.current_word)
         titleView!!.text = chosenFileName?.replace("asset__", "")
         currentChunkView!!.movementMethod = ScrollingMovementMethod()
 
@@ -124,7 +123,7 @@ class BookReaderFragment : Fragment() {
         val chapterTxt = getChapter(book!!.spine, chapter, book!!, rootView!!)
         fullText = StringBuilder(chapterTxt!!)
         val tokens = getWordTokens(fullText.toString())
-        return tokensToArrayList(tokens!!)
+        return tokens?.let { tokensToArrayList(it) } ?: ArrayList()
     }
 
     fun readChapter(chapter: Int) {
