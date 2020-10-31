@@ -11,7 +11,7 @@ class ChapterControl(val context: BookReaderFragment,
                      val activity: Activity,
                      rootView: View,
                      val reader: Reader,
-                     var storyConfig: HashMap<String?, String?>,
+                     var storyConfig: HashMap<String, String>,
                      val chosenFileName: String,
                      book: Book) {
 
