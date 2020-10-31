@@ -1,20 +1,17 @@
 package com.speedpubread.oceo.speedread
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
 import android.text.method.ScrollingMovementMethod
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.fragment.app.Fragment
-import com.speedpubread.oceo.speedread.EPubLibUtil.Companion.exploreTOC
 import com.speedpubread.oceo.speedread.EPubLibUtil.Companion.getBook
-import com.speedpubread.oceo.speedread.EPubLibUtil.Companion.getTOCResourceIds
 import com.speedpubread.oceo.speedread.SpeedReadUtilities.Companion.bookNameFromPath
-import com.speedpubread.oceo.speedread.parser.getChapter
+import com.speedpubread.oceo.speedread.parser.parseChapter
+import com.speedpubread.oceo.speedread.parser.parseBook
 import nl.siegmann.epublib.domain.Book
 import java.util.*
 import kotlin.collections.ArrayList
@@ -73,12 +70,12 @@ class BookReaderFragment : Fragment() {
         book = getBook(chosenFilePath, context!!)
         val storyConfig = getStoryDetails() // metadata about user pos in book
         reader = Reader(activity = activity!!, rootView = rootView)
-        setReaderPositionFromPrefs(storyConfig)
-        val tokens = getStory(storyConfig[CHAPTER_KEY]!!.toInt())
         wpm = WPM(activity!!, rootView, reader)
+        setReaderPositionFromPrefs(storyConfig)
+        readChapter(storyConfig[CHAPTER_KEY]!!.toInt()) // sets some reader attrb reqd for seeker
+//        readBook()
         chapterControl = ChapterControl(this, activity!!, rootView, reader, storyConfig, chosenFileName!!, book!!)
-        readChapter(storyConfig[CHAPTER_KEY]!!.toInt())
-        seeker = Seeker(rootView, reader, tokens!!)
+        seeker = Seeker(rootView, reader)
 
         pauseResumeBtn!!.setOnClickListener(View.OnClickListener {
             if (!reader.disposableReader!!.isDisposed) {
@@ -89,14 +86,13 @@ class BookReaderFragment : Fragment() {
                 reader.iterateWords()
             }
         })
-        tocResourceIds = getTOCResourceIds(exploreTOC(book!!), 0, ArrayList<String>())
         return rootView
     }
 
     override fun onResume() {
         // updaste this for continue on resume
         if (book != null) {
-            setReaderPositionFromPrefs(getStoryDetails()!!)
+            setReaderPositionFromPrefs(getStoryDetails())
             if (firstTimeFlag == 0) {
 //                reader.iterateWords()
             }
@@ -119,21 +115,29 @@ class BookReaderFragment : Fragment() {
     }
 
 
-    fun getStory(chapter: Int): ArrayList<String>? {
-        val chapterTxt = getChapter(book!!.spine, chapter, book!!, rootView!!)
-        fullText = StringBuilder(chapterTxt!!)
-        val tokens = getWordTokens(fullText.toString())
-        return tokens?.let { tokensToArrayList(it) } ?: ArrayList()
-    }
 
     fun readChapter(chapter: Int) {
-        val tokens = getStory(chapter)
-        tokens?.let {
+        val chapterTxt = parseChapter(book!!, chapter)
+        fullText = StringBuilder(chapterTxt!!)
+        val tokens = getWordTokens(fullText.toString())?.let { tokensToArrayList(it) }
+                ?: ArrayList()
+
+        tokens.let {
             reader.maxWordIdx = it.size
             reader.currentChapter = chapter
             chapterSeekBar!!.max = it.size
             reader.loadChapter(it)
         }
+    }
+
+    fun readBook() {
+        val fullBook = parseBook(book!!).joinToString(" ")
+        val fullBookText = StringBuilder(fullBook)
+        val bookTokens = tokensToArrayList(getWordTokens(fullBookText.toString())!!)
+        reader.maxWordIdx = bookTokens.size
+        reader.currentChapter = 0
+        chapterSeekBar!!.max = bookTokens.size
+        reader.loadChapter(bookTokens)
     }
 
     fun setReaderPositionFromPrefs(bookDetails: HashMap<String?, String?>) {
@@ -157,21 +161,18 @@ class BookReaderFragment : Fragment() {
                 ?: HashMap()
     }
 
+    fun getWordTokens(words: String?): StringTokenizer? {
+        return if (words == null || words.isEmpty()) {
+            null
+        } else StringTokenizer(words, " \t\n\r\u000C", false)
+    }
 
-    companion object {
-        fun getWordTokens(words: String?): StringTokenizer? {
-            return if (words == null || words.isEmpty()) {
-                null
-            } else StringTokenizer(words, " \t\n\r\u000C", false)
+    fun tokensToArrayList(tokens: StringTokenizer): ArrayList<String> {
+        // given a story tokenized by words dump them into arraylist
+        val story = ArrayList<String>()
+        while (tokens.hasMoreTokens()) {
+            story.add(tokens.nextToken())
         }
-
-        fun tokensToArrayList(tokens: StringTokenizer): ArrayList<String> {
-            // given a story tokenized by words dump them into arraylist
-            val story = ArrayList<String>()
-            while (tokens.hasMoreTokens()) {
-                story.add(tokens.nextToken())
-            }
-            return story
-        }
+        return story
     }
 }

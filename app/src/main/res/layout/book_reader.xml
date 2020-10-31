@@ -12,10 +12,10 @@
         android:id="@+id/item_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="test"
         android:gravity="center"
+        android:text="test"
         android:textColor="@android:color/background_light"
-        app:layout_constraintTop_toTopOf="parent"></TextView>
+        app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/chapter_controls"
@@ -76,7 +76,7 @@
         android:id="@+id/current_word"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="100dp"
+        android:layout_marginTop="75dp"
         android:gravity="center"
         android:padding="50dp"
         android:textColor="@android:color/white"
@@ -88,7 +88,7 @@
         android:id="@+id/current_chunk"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:paddingTop="30dp"
+        android:paddingTop="20dp"
         android:paddingBottom="70dp"
         android:scrollbars="vertical"
         android:textColor="@android:color/white"
@@ -108,7 +108,7 @@
         android:scrollbars="vertical"
         android:textColor="@android:color/white"
         app:layout_constrainedHeight="true"
-        app:layout_constraintBottom_toTopOf="@id/seekBar"></TextView>
+        app:layout_constraintBottom_toTopOf="@id/seekBar" />
 
 
     <SeekBar
@@ -116,7 +116,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="50dp"
-        app:layout_constraintBottom_toTopOf="@id/reader_footer"></SeekBar>
+        app:layout_constraintBottom_toTopOf="@id/reader_footer" />
 
     <LinearLayout
         android:id="@+id/reader_footer"

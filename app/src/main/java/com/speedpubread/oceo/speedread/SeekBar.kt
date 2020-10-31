@@ -5,7 +5,7 @@ import android.view.View
 import android.widget.SeekBar
 import android.widget.TextView
 
-class Seeker(rootView: View, val reader: Reader, val story: ArrayList<String>) {
+class Seeker(rootView: View, val reader: Reader) {
 
     val chapterSeekBar: SeekBar = rootView.findViewById(R.id.seekBar)
     val chptProgressView: TextView = rootView.findViewById(R.id.chapter_progress_view)
@@ -39,7 +39,7 @@ class Seeker(rootView: View, val reader: Reader, val story: ArrayList<String>) {
             override fun onStopTrackingTouch(seekBar: SeekBar) {
 //                Log.d(TAG, "seekBar stop tracking touch");
                 val progress = seekBar.progress
-                reader.currSentenceStart = reader.getSentenceStartIdx(progress, story)
+                reader.currSentenceStart = reader.getSentenceStartIdx(progress)
                 reader.currentWordIdx = reader.currSentenceStart
                 //                reader.currSentenceIdx = getWordPositionInSentence(progress/;
                 reader.currSentenceIdx = 0

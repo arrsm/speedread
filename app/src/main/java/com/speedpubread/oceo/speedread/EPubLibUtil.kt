@@ -13,6 +13,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.lang.Exception
 import java.util.*
 
 class EPubLibUtil {
@@ -55,7 +56,6 @@ class EPubLibUtil {
             try {
                 val epubInputStream: InputStream
                 epubInputStream = if (fName.contains("asset__")) {
-//                    Log.d(TAG, "making in stream from asset")
                     val fileDescriptor = context.assets.openFd(fName.replace("asset__", ""))
                     fileDescriptor.createInputStream()
                 } else {
@@ -66,6 +66,7 @@ class EPubLibUtil {
                     book = EpubReader().readEpub(epubInputStream)
                 } else {
                     Log.d("GetBook", "Not an Epub");
+                    // throw exception here
                 }
             } catch (e: IOException) {
                 e.printStackTrace()
