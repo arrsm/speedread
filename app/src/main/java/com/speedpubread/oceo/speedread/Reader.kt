@@ -154,9 +154,9 @@ class Reader(var WPM: Long = 0,
         return displayStrs
     }
 
-    fun getSentenceStartIdx(idx: Int, story: ArrayList<String>): Int {
+    fun getSentenceStartIdx(idx: Int): Int {
         var temp = idx
-        while (!story[temp].contains(".") && temp > 0) {
+        while (!chapter!![temp].contains(".") && temp > 0) {
             temp -= 1
         }
         return temp + 1

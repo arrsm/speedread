@@ -3,33 +3,36 @@ package com.speedpubread.oceo.speedread.parser
 import android.graphics.Bitmap
 import android.text.Html
 import android.text.Spanned
-import android.view.View
 import com.speedpubread.oceo.speedread.EPubLibUtil
 import nl.siegmann.epublib.domain.Book
 import nl.siegmann.epublib.domain.Resource
-import nl.siegmann.epublib.domain.Spine
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.util.ArrayList
 
-fun getChapter(spine: Spine, spineLocation: Int, book: Book, rootView: View): String? {
-    if (spineLocation > spine.size()) {
+fun parseBook(book: Book): List<String?> {
+    // parse entire book
+    return (0..book.spine.size() - 1).map { parseChapter(book, it) }
+}
+
+fun parseChapter(book: Book, spineLocation: Int): String? {
+    if (spineLocation > book.spine.size()) {
         return null
     }
     val string = StringBuilder()
     val inStream: InputStream
     val reader: BufferedReader
     var line: String?
-    val res: Resource = spine.getResource(spineLocation)
+    val res: Resource = book.spine.getResource(spineLocation)
     try {
         inStream = res.inputStream
         reader = BufferedReader(InputStreamReader(inStream))
         while (reader.readLine().also { line = it } != null) {
-            val span = lineParser(line!!, rootView, book)
+            val span = lineParser(line!!, book)
             if (span != null) {
-                string.append(span)
+                string.append("$span")
             }
         }
     } catch (e: IOException) {
@@ -39,15 +42,15 @@ fun getChapter(spine: Spine, spineLocation: Int, book: Book, rootView: View): St
     return string.toString().replace(".", ". ")
 }
 
-private fun lineParser(line: String, rootView: View, book: Book): Spanned? {
+private fun lineParser(line: String, book: Book): Spanned? {
     if (line.contains("<title>")) {
         return null
     }
-    val formattedLine = formatLine(line, rootView, book)
+    val formattedLine = formatLine(line, book)
     return Html.fromHtml(formattedLine)
 }
 
-private fun formatLine(line: String, rootView: View, book: Book): String {
+private fun formatLine(line: String, book: Book): String {
     var line = line
     if (line.contains("http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd")) {
         line = line.substring(line.indexOf(">") + 1, line.length)
