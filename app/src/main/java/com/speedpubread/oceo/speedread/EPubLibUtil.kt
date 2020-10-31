@@ -66,7 +66,7 @@ class EPubLibUtil {
                     book = EpubReader().readEpub(epubInputStream)
                 } else {
                     Log.d("GetBook", "Not an Epub");
-                    // throw exception here
+                    throw Exception()
                 }
             } catch (e: IOException) {
                 e.printStackTrace()
