@@ -1,5 +1,6 @@
 package com.speedpubread.oceo.speedread
 
+import android.annotation.SuppressLint
 import android.view.View
 import android.widget.SeekBar
 import android.widget.TextView
@@ -9,6 +10,11 @@ class Seeker(rootView: View, val reader: Reader, val story: ArrayList<String>) {
     val chapterSeekBar: SeekBar = rootView.findViewById(R.id.seekBar)
     val chptProgressView: TextView = rootView.findViewById(R.id.chapter_progress_view)
 
+    init {
+        setupSeekbar()
+    }
+
+    @SuppressLint("SetTextI18n")
     fun setupSeekbar() {
         chapterSeekBar.max = reader.maxWordIdx
         chapterSeekBar.min = 0

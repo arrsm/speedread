@@ -19,6 +19,10 @@ class WPM(val activity: Activity, val rootView: View, val reader: Reader) {
     val lowerWPMButton: Button = rootView.findViewById(R.id.lower_wpm_button)
     val WPM_view: TextView = rootView.findViewById(R.id.current_wpm_view)
 
+    init {
+        setupWPMControls()
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     fun setupWPMControls() {
 

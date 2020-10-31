@@ -1,5 +1,6 @@
 package com.speedpubread.oceo.speedread
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
 import android.text.method.ScrollingMovementMethod
@@ -27,7 +28,6 @@ class BookReaderFragment : Fragment() {
     var book: Book? = null
     var firstTimeFlag = 0 // should spinner action be called
     protected var fullText: StringBuilder? = null// holds full story in memory
-    private var story: ArrayList<String>? = null // fullText converted to arraylist
     private var tocResourceIds: ArrayList<String>? = null
 
     protected var chosenFilePath: String? = null
@@ -35,17 +35,14 @@ class BookReaderFragment : Fragment() {
     lateinit var reader: Reader
     lateinit var wpm: WPM
     lateinit var seeker: Seeker
+    lateinit var chapterControl: ChapterControl
 
     // views
-    private var rootView: View? = null
+    lateinit var rootView: View
     private var currentWordView: TextView? = null
     private var currentChunkView: TextView? = null
-    private var currentChapterview: TextView? = null
-    private var raiseChapterButton: Button? = null
-    private var lowerChapterButton: Button? = null
     private var titleView: TextView? = null
     private var chapterSeekBar: SeekBar? = null
-    private var chptProgressView: TextView? = null
     private var pauseResumeBtn: Button? = null
 
     // prefs keys
@@ -66,38 +63,23 @@ class BookReaderFragment : Fragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         rootView = inflater.inflate(R.layout.book_reader, container, false)
-        titleView = rootView!!.findViewById(R.id.item_title)
-        currentChunkView = rootView!!.findViewById(R.id.current_chunk)
-        pauseResumeBtn = rootView!!.findViewById(R.id.pause_resume)
-        chapterSeekBar = rootView!!.findViewById(R.id.seekBar)
-        chptProgressView = rootView!!.findViewById(R.id.chapter_progress_view)
-        currentWordView = rootView!!.findViewById(R.id.current_word)
-
+        titleView = rootView.findViewById(R.id.item_title)
+        currentChunkView = rootView.findViewById(R.id.current_chunk)
+        pauseResumeBtn = rootView.findViewById(R.id.pause_resume)
+        chapterSeekBar = rootView.findViewById(R.id.seekBar)
+        currentWordView = rootView.findViewById(R.id.current_word)
         titleView!!.text = chosenFileName?.replace("asset__", "")
         currentChunkView!!.movementMethod = ScrollingMovementMethod()
 
         book = getBook(chosenFilePath, context!!)
         val storyConfig = getStoryDetails() // metadata about user pos in book
-        reader = Reader(activity = activity!!, bookDetails = storyConfig!!, rootView = rootView!!)
+        reader = Reader(activity = activity!!, rootView = rootView)
         setReaderPositionFromPrefs(storyConfig)
         val tokens = getStory(storyConfig[CHAPTER_KEY]!!.toInt())
-
-        wpm = WPM(activity!!, rootView!!, reader)
-        wpm.setupWPMControls()
-
+        wpm = WPM(activity!!, rootView, reader)
+        chapterControl = ChapterControl(this, activity!!, rootView, reader, storyConfig, chosenFileName!!, book!!)
         readChapter(storyConfig[CHAPTER_KEY]!!.toInt())
-//        if (tokens != null) {
-//            story = tokens
-//            reader.chapter = tokens
-//            reader.maxWordIdx = story!!.size
-//            chapterSeekBar!!.max = reader.maxWordIdx
-//        }
-
-
-        setupChapterControls(book)
-
-        seeker = Seeker(rootView!!, reader, tokens!!)
-        seeker.setupSeekbar()
+        seeker = Seeker(rootView, reader, tokens!!)
 
         pauseResumeBtn!!.setOnClickListener(View.OnClickListener {
             if (!reader.disposableReader!!.isDisposed) {
@@ -109,8 +91,6 @@ class BookReaderFragment : Fragment() {
             }
         })
         tocResourceIds = getTOCResourceIds(exploreTOC(book!!), 0, ArrayList<String>())
-
-
         return rootView
     }
 
@@ -133,10 +113,9 @@ class BookReaderFragment : Fragment() {
 
     fun saveBookDetailsToPrefs() {
         val bookDetails = getStoryDetails()
-        bookDetails!![CHAPTER_KEY] = reader.currentChapter.toString()
+        bookDetails[CHAPTER_KEY] = reader.currentChapter.toString()
         bookDetails[WORD_KEY] = reader.currentWordIdx.toString()
         bookDetails[SENTENCE_START_KEY] = reader.currSentenceStart.toString()
-        reader.bookDetails = bookDetails
         PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
     }
 
@@ -148,42 +127,11 @@ class BookReaderFragment : Fragment() {
         return tokensToArrayList(tokens!!)
     }
 
-
-    fun setupChapterControls(book: Book?) {
-
-        val maxChapter = (book!!.spine.spineReferences.size)
-        raiseChapterButton = rootView!!.findViewById(R.id.raise_chpt_button)
-        lowerChapterButton = rootView!!.findViewById(R.id.lower_chpt_btn)
-        currentChapterview = rootView!!.findViewById(R.id.current_chapter)
-        raiseChapterButton!!.setOnClickListener(View.OnClickListener {
-            if (reader.currentChapter < maxChapter - 1) {
-                reader.currentChapter += 1
-                currentChapterview!!.text = "Section: ${reader.currentChapter + 1}/${maxChapter}"
-
-                val bookDetails = getStoryDetails()
-                bookDetails!![CHAPTER_KEY] = reader.currentChapter.toString()
-                PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
-                readChapter(reader.currentChapter)
-            }
-        })
-        lowerChapterButton!!.setOnClickListener(View.OnClickListener {
-            if (reader.currentChapter > 0) {
-                reader.currentChapter -= 1
-                currentChapterview!!.text = "Section: ${reader.currentChapter + 1}/${maxChapter}"
-                val bookDetails = getStoryDetails()
-                bookDetails!![CHAPTER_KEY] = reader.currentChapter.toString()
-                PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
-                readChapter(reader.currentChapter)
-            }
-        })
-        currentChapterview!!.text = "Section: ${reader.currentChapter + 1}/${maxChapter}"
-    }
-
     fun readChapter(chapter: Int) {
-        // dependency on chapter..
         val tokens = getStory(chapter)
         tokens?.let {
             reader.maxWordIdx = it.size
+            reader.currentChapter = chapter
             chapterSeekBar!!.max = it.size
             reader.loadChapter(it)
         }
@@ -204,7 +152,7 @@ class BookReaderFragment : Fragment() {
         val sentenceDelay = PrefsUtil.readLongFromPrefs(activity!!, "sentence_delay")
     }
 
-    fun getStoryDetails(): HashMap<String?, String?>? {
+    fun getStoryDetails(): HashMap<String?, String?> {
         // metadata about users book. eg currentchapter, current word etc from profs
         return PrefsUtil.readBookDetailsFromPrefs(activity!!, chosenFileName)?.let { it }
                 ?: HashMap()

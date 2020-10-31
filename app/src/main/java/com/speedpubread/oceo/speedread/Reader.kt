@@ -20,26 +20,18 @@ class Reader(var WPM: Long = 0,
              var maxWordIdx: Int = 0,
              var currentChapter: Int = 0,
              activity: Activity,
-             var bookDetails: HashMap<String?, String?>,
              rootView: View,
 ) {
 
     private val TAG = "Reader"
-
     val currentChunkView: TextView = rootView.findViewById(R.id.current_chunk)
     val currentWordView: TextView = rootView.findViewById(R.id.current_word)
     val chptProgressView: TextView = rootView.findViewById(R.id.chapter_progress_view)
     val chapterSeeker: SeekBar = rootView.findViewById(R.id.seekBar)
-
     var disposableReader: Disposable? = null
-
-    val CHAPTER_KEY = "chapter"
-    val WORD_KEY = "page"
-    val SENTENCE_START_KEY = "sentence_start"
     val WPM_KEY = "wpm"
     val SENTENCE_DELAY_KEY = "sentence_delay"
     var chapter: ArrayList<String>? = null
-
 
     init {
         WPM = PrefsUtil.readLongFromPrefs(activity, WPM_KEY)
@@ -164,11 +156,11 @@ class Reader(var WPM: Long = 0,
     }
 
     fun getSentenceStartIdx(idx: Int, story: ArrayList<String>): Int {
-        var idx = idx
-        while (!story[idx].contains(".") && idx > 0) {
-            idx -= 1
+        var temp = idx
+        while (!story[temp].contains(".") && temp > 0) {
+            temp -= 1
         }
-        return idx + 1
+        return temp + 1
     }
 
     fun loadChapter(chapter: ArrayList<String>) {
