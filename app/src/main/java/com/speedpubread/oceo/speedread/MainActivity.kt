@@ -18,8 +18,7 @@ import java.lang.Exception
 class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
     var TAG = "MainActivity"
     var activity: Activity? = null
-    private val currentChapter = 0
-    private val currentWordIdx = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         activity = this
@@ -133,23 +132,15 @@ class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
         super.onResume()
     }
 
-//    private fun addBookReaderFragment() {
-//        val fragment = BookReaderFragment()
-//        val transaction = supportFragmentManager
-//                .beginTransaction()
-//                .replace(R.id.container, fragment)
-//                .addToBackStack("tag")
-//        transaction.commit()
-//    }
 
     private fun addBookSelectionFragment() {
         val fragment = BookSelectionFragment()
         val transaction = supportFragmentManager
                 .beginTransaction()
                 .replace(R.id.container, fragment)
-                .addToBackStack("tag")
         transaction.commit()
     }
+
 
     override fun sendFilePath(fPath: String?) {
         val bundle = Bundle()
@@ -169,8 +160,6 @@ class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
         } catch (e: Exception) {
             Toast.makeText(this, "Failed to open", Toast.LENGTH_LONG).show()
         }
-
-
     }
 
     override fun removeFile(fPath: String?) {

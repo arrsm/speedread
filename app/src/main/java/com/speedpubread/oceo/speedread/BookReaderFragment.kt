@@ -62,14 +62,13 @@ class BookReaderFragment(val book: Book) : Fragment() {
         titleView!!.text = chosenFileName?.replace("asset__", "")
         currentChunkView!!.movementMethod = ScrollingMovementMethod()
 
-
         val storyConfig = getStoryDetails() // metadata about user pos in book
         reader = Reader(activity = activity!!, rootView = rootView)
         wpm = WPM(activity!!, rootView, reader)
         setReaderPositionFromPrefs(storyConfig)
         readChapter(storyConfig[CHAPTER_KEY]!!.toInt()) // sets some reader attrb reqd for seeker
 //        readBook()
-        chapterControl = ChapterControl(this, activity!!, rootView, reader, storyConfig, chosenFileName!!, book!!)
+        chapterControl = ChapterControl(this, activity!!, rootView, reader, storyConfig, chosenFileName!!, book)
         seeker = Seeker(rootView, reader)
 
         pauseResumeBtn!!.setOnClickListener(View.OnClickListener {
@@ -81,16 +80,11 @@ class BookReaderFragment(val book: Book) : Fragment() {
                 reader.iterateWords()
             }
         })
-
-
         return rootView
     }
 
     override fun onResume() {
-        // updaste this for continue on resume
-        if (book != null) {
-            setReaderPositionFromPrefs(getStoryDetails())
-        }
+        setReaderPositionFromPrefs(getStoryDetails())
         super.onResume()
     }
 
@@ -137,7 +131,7 @@ class BookReaderFragment(val book: Book) : Fragment() {
         return bookTokens
     }
 
-    fun setReaderPositionFromPrefs(bookDetails: HashMap<String?, String?>) {
+    fun setReaderPositionFromPrefs(bookDetails: HashMap<String, String>) {
         val tempChpt = bookDetails[CHAPTER_KEY]
         val tempWord = bookDetails[WORD_KEY]
         val tempSentenceStart = bookDetails[SENTENCE_START_KEY]
@@ -153,10 +147,10 @@ class BookReaderFragment(val book: Book) : Fragment() {
         val sentenceDelay = PrefsUtil.readLongFromPrefs(activity!!, "sentence_delay")
     }
 
-    fun getStoryDetails(): HashMap<String?, String?> {
+    fun getStoryDetails(): HashMap<String, String> {
         // metadata about users book. eg currentchapter, current word etc from profs
         return PrefsUtil.readBookDetailsFromPrefs(activity!!, chosenFileName)?.let { it }
-                ?: HashMap()
+                ?: hashMapOf(CHAPTER_KEY to "0")
     }
 
     fun getWordTokens(words: String?): StringTokenizer? {

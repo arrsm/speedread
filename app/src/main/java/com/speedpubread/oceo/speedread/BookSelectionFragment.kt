@@ -17,7 +17,6 @@ import com.speedpubread.oceo.speedread.FileSelector.Companion.launchFileChooser
 import com.speedpubread.oceo.speedread.FileSelector.Companion.requestReadPermission
 import com.speedpubread.oceo.speedread.SpeedReadUtilities.Companion.bookNamesFromPath
 import com.speedpubread.oceo.speedread.SpeedReadUtilities.Companion.modifyFilePath
-import kotlin.collections.ArrayList
 
 class BookSelectionFragment : Fragment() {
     private val TAG = "BookSelectionFragment"
@@ -71,6 +70,7 @@ class BookSelectionFragment : Fragment() {
         })
     }
 
+
     /*
     result of selecting a file from OP6 file explorer
         would have liked this to be in the FileSelector class but seems the result should be here
@@ -88,6 +88,7 @@ class BookSelectionFragment : Fragment() {
         filePath = modifyFilePath(filePath!!)
         selectionCallback!!.sendFilePath(filePath)
     }
+
 
     fun getDefaultEpubFiles(): ArrayList<String?> {
         val assets = context?.assets?.list("")
