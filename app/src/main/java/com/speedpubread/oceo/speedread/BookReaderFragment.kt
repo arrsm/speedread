@@ -3,6 +3,7 @@ package com.speedpubread.oceo.speedread
 import android.app.Activity
 import android.os.Bundle
 import android.text.method.ScrollingMovementMethod
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,21 +14,16 @@ import com.speedpubread.oceo.speedread.SpeedReadUtilities.Companion.bookNameFrom
 import com.speedpubread.oceo.speedread.parser.parseChapter
 import com.speedpubread.oceo.speedread.parser.parseBook
 import nl.siegmann.epublib.domain.Book
+import java.lang.Exception
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
-class BookReaderFragment : Fragment() {
+class BookReaderFragment(val book: Book) : Fragment() {
     var TAG = "BookReaderFragment"
     var activity: Activity? = null
-    var frag: Fragment? = null
 
     // logic globals
-    var book: Book? = null
-    var firstTimeFlag = 0 // should spinner action be called
-    protected var fullText: StringBuilder? = null// holds full story in memory
-    private var tocResourceIds: ArrayList<String>? = null
-
     protected var chosenFilePath: String? = null
     protected var chosenFileName: String? = null
     lateinit var reader: Reader
@@ -46,16 +42,15 @@ class BookReaderFragment : Fragment() {
     val CHAPTER_KEY = "chapter"
     val WORD_KEY = "page"
     val SENTENCE_START_KEY = "sentence_start"
+    val TOTAL_WORDS = "total_words"
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         activity = getActivity()
-        frag = this
         val bundle = this.arguments
         chosenFilePath = bundle!!.getString("file_path")
         chosenFileName = bookNameFromPath(chosenFilePath!!)
-        PrefsUtil.writeBookToPrefs(activity!!, chosenFilePath)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -67,7 +62,7 @@ class BookReaderFragment : Fragment() {
         titleView!!.text = chosenFileName?.replace("asset__", "")
         currentChunkView!!.movementMethod = ScrollingMovementMethod()
 
-        book = getBook(chosenFilePath, context!!)
+
         val storyConfig = getStoryDetails() // metadata about user pos in book
         reader = Reader(activity = activity!!, rootView = rootView)
         wpm = WPM(activity!!, rootView, reader)
@@ -86,6 +81,8 @@ class BookReaderFragment : Fragment() {
                 reader.iterateWords()
             }
         })
+
+
         return rootView
     }
 
@@ -93,9 +90,6 @@ class BookReaderFragment : Fragment() {
         // updaste this for continue on resume
         if (book != null) {
             setReaderPositionFromPrefs(getStoryDetails())
-            if (firstTimeFlag == 0) {
-//                reader.iterateWords()
-            }
         }
         super.onResume()
     }
@@ -108,6 +102,7 @@ class BookReaderFragment : Fragment() {
 
     fun saveBookDetailsToPrefs() {
         val bookDetails = getStoryDetails()
+        bookDetails[TOTAL_WORDS] = bookDetails[TOTAL_WORDS] ?: getBookWords().size.toString()
         bookDetails[CHAPTER_KEY] = reader.currentChapter.toString()
         bookDetails[WORD_KEY] = reader.currentWordIdx.toString()
         bookDetails[SENTENCE_START_KEY] = reader.currSentenceStart.toString()
@@ -115,29 +110,31 @@ class BookReaderFragment : Fragment() {
     }
 
 
-
-    fun readChapter(chapter: Int) {
-        val chapterTxt = parseChapter(book!!, chapter)
-        fullText = StringBuilder(chapterTxt!!)
-        val tokens = getWordTokens(fullText.toString())?.let { tokensToArrayList(it) }
+    fun readChapter(chapterId: Int) {
+        val chapter = parseChapter(book!!, chapterId)
+        val chapterText = StringBuilder(chapter!!)
+        val tokens = getWordTokens(chapterText.toString())?.let { tokensToArrayList(it) }
                 ?: ArrayList()
 
-        tokens.let {
-            reader.maxWordIdx = it.size
-            reader.currentChapter = chapter
-            chapterSeekBar!!.max = it.size
-            reader.loadChapter(it)
-        }
+        reader.maxWordIdx = tokens.size
+        reader.currentChapter = chapterId
+        chapterSeekBar!!.max = tokens.size
+        reader.loadChapter(tokens)
     }
 
     fun readBook() {
-        val fullBook = parseBook(book!!).joinToString(" ")
-        val fullBookText = StringBuilder(fullBook)
-        val bookTokens = tokensToArrayList(getWordTokens(fullBookText.toString())!!)
+        val bookTokens = getBookWords()
         reader.maxWordIdx = bookTokens.size
         reader.currentChapter = 0
         chapterSeekBar!!.max = bookTokens.size
         reader.loadChapter(bookTokens)
+    }
+
+    fun getBookWords(): ArrayList<String> {
+        val fullBook = parseBook(book!!).joinToString(" ")
+        val fullBookText = StringBuilder(fullBook)
+        val bookTokens = tokensToArrayList(getWordTokens(fullBookText.toString())!!)
+        return bookTokens
     }
 
     fun setReaderPositionFromPrefs(bookDetails: HashMap<String?, String?>) {
@@ -149,6 +146,7 @@ class BookReaderFragment : Fragment() {
         reader.currentWordIdx = if (tempWord == null) 0 else Integer.valueOf(tempWord)
         reader.currSentenceStart = if (tempSentenceStart == null) 0 else Integer.valueOf(tempSentenceStart)
     }
+
 
     fun getUserConfigFromPrefs() {
         val WPM = PrefsUtil.readLongFromPrefs(activity!!, "wpm")

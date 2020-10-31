@@ -5,29 +5,31 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.FragmentManager
 import com.speedpubread.oceo.speedread.BookSelectionFragment.RemoveChosenFile
 import com.speedpubread.oceo.speedread.BookSelectionFragment.SendChosenFile
+import com.speedpubread.oceo.speedread.EPubLibUtil.Companion.getBook
 import io.reactivex.disposables.Disposable
+import nl.siegmann.epublib.domain.Book
+import java.lang.Exception
 
 class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
     var TAG = "MainActivity"
     var activity: Activity? = null
     private val currentChapter = 0
     private val currentWordIdx = 0
-    var disposableReader: Disposable? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         activity = this
         setContentView(R.layout.activity_main)
         if (savedInstanceState == null) {
-//            addBookReaderFragment();
             addBookSelectionFragment()
-
-            //https://stackoverflow.com/questions/38390085/how-to-inflate-an-optionsmenu-vertically-on-a-button-click
         }
+    }
 
-
+    fun setupFirebase() {
         /*
         firebase
      */
@@ -108,7 +110,6 @@ class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
     override fun onStart() {
 //        Log.d(TAG, "onStart");
         super.onStart()
-
 //        RxSandbox.testMappingObs();
     }
 
@@ -132,14 +133,14 @@ class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
         super.onResume()
     }
 
-    private fun addBookReaderFragment() {
-        val fragment = BookReaderFragment()
-        val transaction = supportFragmentManager
-                .beginTransaction()
-                .replace(R.id.container, fragment)
-                .addToBackStack("tag")
-        transaction.commit()
-    }
+//    private fun addBookReaderFragment() {
+//        val fragment = BookReaderFragment()
+//        val transaction = supportFragmentManager
+//                .beginTransaction()
+//                .replace(R.id.container, fragment)
+//                .addToBackStack("tag")
+//        transaction.commit()
+//    }
 
     private fun addBookSelectionFragment() {
         val fragment = BookSelectionFragment()
@@ -153,13 +154,23 @@ class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
     override fun sendFilePath(fPath: String?) {
         val bundle = Bundle()
         bundle.putString("file_path", fPath)
-        val br = BookReaderFragment()
-        br.arguments = bundle
-        val transaction = supportFragmentManager
-                .beginTransaction()
-                .replace(R.id.container, br)
-                .addToBackStack("tag")
-        transaction.commit()
+
+        val book: Book?
+        try {
+            book = getBook(fPath, this)!!
+            PrefsUtil.writeBookToPrefs(activity!!, fPath)
+            val br = BookReaderFragment(book)
+            br.arguments = bundle
+            val transaction = supportFragmentManager
+                    .beginTransaction()
+                    .replace(R.id.container, br)
+                    .addToBackStack("tag")
+            transaction.commit()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to open", Toast.LENGTH_LONG).show()
+        }
+
+
     }
 
     override fun removeFile(fPath: String?) {

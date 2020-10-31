@@ -1,6 +1,7 @@
 package com.speedpubread.oceo.speedread
 
 import android.app.Activity
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,7 +14,7 @@ import com.speedpubread.oceo.speedread.BookSelectionFragment.RemoveChosenFile
 import com.speedpubread.oceo.speedread.BookSelectionFragment.SendChosenFile
 import java.util.*
 
-class BookListAdapter(private val mDataset: ArrayList<String>, private val bookList: List<String?>, activity: Activity) : RecyclerView.Adapter<MyViewHolder>() {
+class BookListAdapter(private val mDataset: ArrayList<String>, private val bookList: List<String?>, val activity: Activity) : RecyclerView.Adapter<MyViewHolder>() {
     private var selectionCallback: SendChosenFile
     private var bookRemovalCallback: RemoveChosenFile
 
@@ -24,10 +25,12 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
         // each data item is just a string in this case
         var textView: TextView
         var deleteButton: Button
+        var bookPercentage: TextView
 
         init {
             textView = v.findViewById(R.id.book_title)
             deleteButton = v.findViewById(R.id.delete_btn)
+            bookPercentage = v.findViewById(R.id.book_percentage)
         }
     }
 
@@ -37,6 +40,10 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
     }
 
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
+        val bookName = mDataset[position]
+        val bookDetails = PrefsUtil.readBookDetailsFromPrefs(activity = activity, bookName = bookName)
+        Log.d("the bookname here", bookName)
+        Log.d("the details are", bookDetails.toString())
         holder.textView.text = mDataset[position].replace("asset__", "")
         holder.textView.setOnClickListener {
             val value = mDataset[position]
@@ -48,6 +55,8 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
 //            Log.d("ADAPTER", "deleting: " + mDataset[position])
             bookRemovalCallback.removeFile(bookList[position])
         }
+
+
     }
 
     override fun getItemCount(): Int {
