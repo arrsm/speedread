@@ -17,6 +17,8 @@ import java.util.*
 class BookListAdapter(private val mDataset: ArrayList<String>, private val bookList: List<String?>, val activity: Activity) : RecyclerView.Adapter<MyViewHolder>() {
     private var selectionCallback: SendChosenFile
     private var bookRemovalCallback: RemoveChosenFile
+    val WORD_KEY = "page"
+    val TOTAL_WORDS = "total_words"
 
     // Provide a reference to the views for each data item
     // Complex data items may need more than one view per item, and
@@ -42,6 +44,11 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
         val bookName = mDataset[position]
         val bookDetails = PrefsUtil.readBookDetailsFromPrefs(activity = activity, bookName = bookName)
+        val wordIdx = bookDetails!![WORD_KEY]?.let { it.toFloat() } ?: 0.toFloat()
+        val totalWords = bookDetails[TOTAL_WORDS]?.let { it.toFloat() } ?: 1.toFloat()
+        val percentComplete = wordIdx / totalWords * 100
+
+
         Log.d("the bookname here", bookName)
         Log.d("the details are", bookDetails.toString())
         holder.textView.text = mDataset[position].replace("asset__", "")
@@ -55,6 +62,8 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
 //            Log.d("ADAPTER", "deleting: " + mDataset[position])
             bookRemovalCallback.removeFile(bookList[position])
         }
+        
+        holder.bookPercentage.text = "${percentComplete}%"
 
 
     }
