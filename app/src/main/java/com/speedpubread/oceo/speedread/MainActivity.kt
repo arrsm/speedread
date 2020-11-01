@@ -171,7 +171,7 @@ class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
         val transaction = supportFragmentManager
                 .beginTransaction()
                 .replace(R.id.container, bs)
-                .addToBackStack("tag")
+//                .addToBackStack("tag")
         transaction.commit()
     }
 

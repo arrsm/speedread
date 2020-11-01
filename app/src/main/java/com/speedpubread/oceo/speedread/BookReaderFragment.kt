@@ -66,8 +66,8 @@ class BookReaderFragment(val book: Book) : Fragment() {
         reader = Reader(activity = activity!!, rootView = rootView)
         wpm = WPM(activity!!, rootView, reader)
         setReaderPositionFromPrefs(storyConfig)
-        readChapter(storyConfig[CHAPTER_KEY]!!.toInt()) // sets some reader attrb reqd for seeker
-//        readBook()
+//        readChapter(storyConfig[CHAPTER_KEY]!!.toInt()) // sets some reader attrb reqd for seeker
+        readBook()
         chapterControl = ChapterControl(this, activity!!, rootView, reader, storyConfig, chosenFileName!!, book)
         seeker = Seeker(rootView, reader)
 
@@ -100,6 +100,12 @@ class BookReaderFragment(val book: Book) : Fragment() {
         bookDetails[CHAPTER_KEY] = reader.currentChapter.toString()
         bookDetails[WORD_KEY] = reader.currentWordIdx.toString()
         bookDetails[SENTENCE_START_KEY] = reader.currSentenceStart.toString()
+
+        // calculate word position in overall book
+//        bookDetails[TOTAL_WORDS]?.let {
+//
+//        }
+
         PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
     }
 
@@ -125,7 +131,7 @@ class BookReaderFragment(val book: Book) : Fragment() {
     }
 
     fun getBookWords(): ArrayList<String> {
-        val fullBook = parseBook(book!!).joinToString(" ")
+        val fullBook = parseBook(book).joinToString(" ")
         val fullBookText = StringBuilder(fullBook)
         val bookTokens = tokensToArrayList(getWordTokens(fullBookText.toString())!!)
         return bookTokens

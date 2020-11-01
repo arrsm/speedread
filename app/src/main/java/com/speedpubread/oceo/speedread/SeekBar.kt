@@ -1,6 +1,7 @@
 package com.speedpubread.oceo.speedread
 
 import android.annotation.SuppressLint
+import android.util.Log
 import android.view.View
 import android.widget.SeekBar
 import android.widget.TextView
@@ -43,10 +44,13 @@ class Seeker(rootView: View, val reader: Reader) {
                 reader.currentWordIdx = reader.currSentenceStart
                 //                reader.currSentenceIdx = getWordPositionInSentence(progress/;
                 reader.currSentenceIdx = 0
+
+                val chapterPercentage = getChapterPercentageComplete()
                 if (chptPercentageComplete.toString().length > 3) {
-                    chptProgressView.setText(chptPercentageComplete.toString().substring(0, 4) + "%")
+                    chptProgressView.setText(chapterPercentage.toString().substring(0, 4) + "%")
                 } else {
-                    chptProgressView.setText("$chptPercentageComplete%")
+                    Log.d("updating seekbar text", progress.toString())
+                    chptProgressView.setText("$chapterPercentage%")
                 }
 //                reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
             }
