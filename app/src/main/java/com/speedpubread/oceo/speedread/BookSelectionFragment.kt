@@ -75,6 +75,10 @@ class BookSelectionFragment : Fragment() {
         })
     }
 
+    override fun onResume() {
+        super.onResume()
+    }
+
 
     /*
     result of selecting a file from OP6 file explorer
