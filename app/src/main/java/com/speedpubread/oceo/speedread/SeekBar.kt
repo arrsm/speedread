@@ -40,7 +40,7 @@ class Seeker(rootView: View, val reader: Reader) {
             override fun onStopTrackingTouch(seekBar: SeekBar) {
 //                Log.d(TAG, "seekBar stop tracking touch");
                 val progress = seekBar.progress
-                reader.currSentenceStart = reader.getSentenceStartIdx(progress)
+                reader.currSentenceStart = reader.getSentenceStartIdx(progress-1)
                 reader.currentWordIdx = reader.currSentenceStart
                 //                reader.currSentenceIdx = getWordPositionInSentence(progress/;
                 reader.currSentenceIdx = 0
