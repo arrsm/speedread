@@ -168,6 +168,7 @@ class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
         val bs = BookSelectionFragment()
         bs.arguments = bundle
         PrefsUtil.removeBookFromPrefs(this, fPath)
+        PrefsUtil.writeBookDeleted(this, fPath!!)
         val transaction = supportFragmentManager
                 .beginTransaction()
                 .replace(R.id.container, bs)

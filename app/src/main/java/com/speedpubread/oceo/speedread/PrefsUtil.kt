@@ -2,9 +2,11 @@ package com.speedpubread.oceo.speedread
 
 import android.app.Activity
 import android.content.Context
+import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.util.*
+import kotlin.collections.HashMap
 
 object PrefsUtil {
     private const val TAG = "PrefsUtil"
@@ -68,10 +70,7 @@ object PrefsUtil {
 //        Log.d("writing book to prefs", activity.toString())
         val sharedPref = activity.getPreferences(Context.MODE_PRIVATE)
         val editor = sharedPref.edit()
-        var currentBookList = readBooksFromPrefs(activity)
-        if (currentBookList == null) {
-            currentBookList = ArrayList()
-        }
+        val currentBookList = readBooksFromPrefs(activity) ?: ArrayList()
         if (!currentBookList.contains(book)) {
             val gson = Gson()
             currentBookList.add(0, book)
@@ -111,4 +110,50 @@ object PrefsUtil {
         }
         return bookList
     }
+
+    fun writeBookDeleted(activity: Activity, book: String) {
+        val sharedPref = activity.getPreferences(Context.MODE_PRIVATE)
+        val editor = sharedPref.edit()
+        val deletedList = readBookDeleted(activity) ?: HashMap()
+        Log.d("currentMetadata", deletedList.toString())
+        deletedList[book] = true
+        val gson = Gson()
+        val insertVal = gson.toJson(deletedList)
+        editor.putString("deleted", insertVal)
+        editor.apply()
+        editor.commit()
+    }
+
+    fun readBookDeleted(activity: Activity): HashMap<String, Boolean>? {
+        val sharedPref = activity.getPreferences(Context.MODE_PRIVATE)
+        val gsonBooksString = sharedPref.getString("deleted", null)
+        val gson = Gson()
+        val type = object : TypeToken<HashMap<String, Boolean>>() {}.type
+        val bookList = gson.fromJson<HashMap<String, Boolean>>(gsonBooksString, type)
+        return bookList
+    }
+
+    fun writeBookMetadata(activity: Activity, book: String) {
+        //  stop gap to store deleted status of books
+        // currently unused
+        val sharedPref = activity.getPreferences(Context.MODE_PRIVATE)
+        val editor = sharedPref.edit()
+        val allMetadata = readBookMetadata(activity)
+        val bookMetadata = allMetadata[book]
+        Log.d("currentMetadata", bookMetadata.toString())
+
+    }
+
+    fun readBookMetadata(activity: Activity): HashMap<String, HashMap<String, String>> {
+        //  stop gap to store deleted status of books
+        // currently unused
+        val sharedPref = activity.getPreferences(Context.MODE_PRIVATE)
+        val gsonBooksString = sharedPref.getString("bookmetadata", null)
+        val gson = Gson()
+        val type = object : TypeToken<HashMap<String, HashMap<String, String>>?>() {}.type
+        val metadata = gson.fromJson<HashMap<String, HashMap<String, String>>?>(gsonBooksString, type)
+        return metadata ?: HashMap()
+    }
+
+
 }
