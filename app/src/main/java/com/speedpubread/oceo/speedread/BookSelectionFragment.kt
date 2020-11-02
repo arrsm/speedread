@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -39,8 +40,12 @@ class BookSelectionFragment : Fragment() {
         activity = getActivity()
         frag = this
         bookList = PrefsUtil.readBooksFromPrefs(activity!!)
+        val deletedBooks = PrefsUtil.readBookDeleted(activity!!)
         bookList = (bookList + getDefaultEpubFiles()) as List<String?>
         bookList = bookList.distinct().toList()
+        // this is a stopgap from prefs to be able to delete the default books. may need a way to
+        // return them
+        bookList = bookList.filter { deletedBooks!![it] == false || deletedBooks[it] == null }
         displayList = bookNamesFromPath(bookList)
         selectionCallback = activity as MainActivity?
         removalCallback = activity as MainActivity?

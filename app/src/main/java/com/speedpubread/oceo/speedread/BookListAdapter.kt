@@ -62,8 +62,12 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
 //            Log.d("ADAPTER", "deleting: " + mDataset[position])
             bookRemovalCallback.removeFile(bookList[position])
         }
-        
-        holder.bookPercentage.text = "${percentComplete}%"
+
+        if (percentComplete.toString().length > 3) {
+            holder.bookPercentage.text = "${percentComplete.toString().substring(0, 4)}%"
+        } else {
+            holder.bookPercentage.text = "${percentComplete}%"
+        }
 
 
     }
