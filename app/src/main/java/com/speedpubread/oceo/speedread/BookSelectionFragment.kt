@@ -40,11 +40,11 @@ class BookSelectionFragment : Fragment() {
         activity = getActivity()
         frag = this
         bookList = PrefsUtil.readBooksFromPrefs(activity!!)
-        val deletedBooks = PrefsUtil.readBookDeleted(activity!!)?.let { it } ?: HashMap()
-        bookList = (bookList + getDefaultEpubFiles()) as List<String?>
+        val deletedBooks = PrefsUtil.readBookDeleted(activity!!) ?: HashMap()
+        bookList = (bookList + getDefaultEpubFiles())
         bookList = bookList.distinct().toList()
         // this is a stopgap from prefs to be able to delete the default books. may need a way to
-        // return themkk
+        // return them
         bookList = bookList.filter { deletedBooks[it] == false || deletedBooks[it] == null }
 
         displayList = bookNamesFromPath(bookList)

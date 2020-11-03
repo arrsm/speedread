@@ -124,6 +124,28 @@ object PrefsUtil {
         editor.commit()
     }
 
+    fun writeChapterSizes(activity: Activity, book: String, chapterLengths: ArrayList<Int>) {
+        val sharedPref = activity.getPreferences(Context.MODE_PRIVATE)
+        val editor = sharedPref.edit()
+        val chapterSizes = readBookChapterSizes(activity, book) ?: HashMap()
+        Log.d("chaptersizes", chapterSizes.toString())
+        chapterSizes[book] = chapterLengths
+        val gson = Gson()
+        val insertVal = gson.toJson(chapterSizes)
+        editor.putString("chaptersizes", insertVal)
+        editor.apply()
+        editor.commit()
+    }
+
+    fun readBookChapterSizes(activity: Activity, book: String): HashMap<String, ArrayList<Int>>? {
+        val sharedPref = activity.getPreferences(Context.MODE_PRIVATE)
+        val gsonBooksString = sharedPref.getString("chaptersizes", null)
+        val gson = Gson()
+        val type = object : TypeToken<HashMap<String, ArrayList<Int>>>() {}.type
+        val bookList = gson.fromJson<HashMap<String, ArrayList<Int>>>(gsonBooksString, type)
+        return bookList
+    }
+
     fun readBookDeleted(activity: Activity): HashMap<String, Boolean>? {
         val sharedPref = activity.getPreferences(Context.MODE_PRIVATE)
         val gsonBooksString = sharedPref.getString("deleted", null)

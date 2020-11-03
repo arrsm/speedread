@@ -96,7 +96,19 @@ class BookReaderFragment(val book: Book) : Fragment() {
 
     fun saveBookDetailsToPrefs() {
         val bookDetails = getStoryDetails()
-        bookDetails[TOTAL_WORDS] = bookDetails[TOTAL_WORDS] ?: getBookWords().size.toString()
+        val chapterIndexes = PrefsUtil.readBookChapterSizes(activity!!, chosenFileName!!)
+        val parsedBook: ArrayList<String>?
+
+        // TODO condition for chapter indexes to be set if they dont exist
+        parsedBook = if (bookDetails[TOTAL_WORDS] == null) getBookWords() else null
+        val chapterLengths: List<Int>?
+        parsedBook?.let {
+            bookDetails[TOTAL_WORDS] = parsedBook.size.toString()
+            chapterLengths = parseBook(book).map { it!!.length }
+            Log.d("the chapter lengths are ", chapterLengths.toString())
+        }
+
+//        bookDetails[TOTAL_WORDS] = bookDetails[TOTAL_WORDS] ?: getBookWords().size.toString()
         bookDetails[CHAPTER_KEY] = reader.currentChapter.toString()
         bookDetails[WORD_KEY] = reader.currentWordIdx.toString()
         bookDetails[SENTENCE_START_KEY] = reader.currSentenceStart.toString()
@@ -111,7 +123,7 @@ class BookReaderFragment(val book: Book) : Fragment() {
 
 
     fun readChapter(chapterId: Int) {
-        val chapter = parseChapter(book!!, chapterId)
+        val chapter = parseChapter(book, chapterId)
         val chapterText = StringBuilder(chapter!!)
         val tokens = getWordTokens(chapterText.toString())?.let { tokensToArrayList(it) }
                 ?: ArrayList()
@@ -155,7 +167,7 @@ class BookReaderFragment(val book: Book) : Fragment() {
 
     fun getStoryDetails(): HashMap<String, String> {
         // metadata about users book. eg currentchapter, current word etc from profs
-        return PrefsUtil.readBookDetailsFromPrefs(activity!!, chosenFileName)?.let { it }
+        return PrefsUtil.readBookDetailsFromPrefs(activity!!, chosenFileName)
                 ?: hashMapOf(CHAPTER_KEY to "0")
     }
 

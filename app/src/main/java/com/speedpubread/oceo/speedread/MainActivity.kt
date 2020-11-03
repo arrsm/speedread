@@ -107,24 +107,19 @@ class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
     }
 
     override fun onStart() {
-//        Log.d(TAG, "onStart");
         super.onStart()
-//        RxSandbox.testMappingObs();
     }
 
     override fun onRestart() {
-//        Log.d(TAG, "onSRestart");
-        super.onRestart() // Always call the superclass method first
+        super.onRestart()
     }
 
     public override fun onPause() {
-//        Log.d(TAG, "onPause");
         super.onPause()
     }
 
     override fun onStop() {
-//        Log.d(TAG, "onStop");
-        super.onStop() // Always call the superclass method first
+        super.onStop()
     }
 
     public override fun onResume() {
@@ -145,7 +140,6 @@ class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
     override fun sendFilePath(fPath: String?) {
         val bundle = Bundle()
         bundle.putString("file_path", fPath)
-
         val book: Book?
         try {
             book = getBook(fPath, this)!!
