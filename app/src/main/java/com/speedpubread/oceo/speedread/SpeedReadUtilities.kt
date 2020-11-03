@@ -25,7 +25,9 @@ class SpeedReadUtilities {
         fun modifyFilePath(filePath: String): String {
             var filePath = filePath
             filePath = "/" + filePath.substring(filePath.indexOf(':') + 1)
-            filePath = "/storage/emulated/0/$filePath"
+
+            // some phones file explorers do not append the storage emulated prefix
+            filePath = if (filePath.contains("storage/emulated")) filePath else "/storage/emulated/0/$filePath"
             filePath = filePath.replace("//".toRegex(), "/")
             return filePath
         }
