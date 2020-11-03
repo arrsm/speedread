@@ -13,6 +13,7 @@ import com.speedpubread.oceo.speedread.BookListAdapter.MyViewHolder
 import com.speedpubread.oceo.speedread.BookSelectionFragment.RemoveChosenFile
 import com.speedpubread.oceo.speedread.BookSelectionFragment.SendChosenFile
 import java.util.*
+import kotlin.collections.HashMap
 
 class BookListAdapter(private val mDataset: ArrayList<String>, private val bookList: List<String?>, val activity: Activity) : RecyclerView.Adapter<MyViewHolder>() {
     private var selectionCallback: SendChosenFile
@@ -43,7 +44,8 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
 
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
         val bookName = mDataset[position]
-        val bookDetails = PrefsUtil.readBookDetailsFromPrefs(activity = activity, bookName = bookName)
+        val bookDetails = PrefsUtil.readBookDetailsFromPrefs(activity = activity, bookName = bookName)?.let { it }
+                ?: HashMap()
         val wordIdx = bookDetails!![WORD_KEY]?.let { it.toFloat() } ?: 0.toFloat()
         val totalWords = bookDetails[TOTAL_WORDS]?.let { it.toFloat() } ?: 1.toFloat()
         val percentComplete = wordIdx / totalWords * 100

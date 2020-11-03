@@ -40,12 +40,13 @@ class BookSelectionFragment : Fragment() {
         activity = getActivity()
         frag = this
         bookList = PrefsUtil.readBooksFromPrefs(activity!!)
-        val deletedBooks = PrefsUtil.readBookDeleted(activity!!)
+        val deletedBooks = PrefsUtil.readBookDeleted(activity!!)?.let { it } ?: HashMap()
         bookList = (bookList + getDefaultEpubFiles()) as List<String?>
         bookList = bookList.distinct().toList()
         // this is a stopgap from prefs to be able to delete the default books. may need a way to
-        // return them
-        bookList = bookList.filter { deletedBooks!![it] == false || deletedBooks[it] == null }
+        // return themkk
+        bookList = bookList.filter { deletedBooks[it] == false || deletedBooks[it] == null }
+
         displayList = bookNamesFromPath(bookList)
         selectionCallback = activity as MainActivity?
         removalCallback = activity as MainActivity?
@@ -91,10 +92,20 @@ class BookSelectionFragment : Fragment() {
         when (requestCode) {
             1 -> if (resultCode == -1) {
                 val fileUri = data.data
+                Log.d("the uri", fileUri.toString())
                 filePath = fileUri?.path
             }
         }
+        Log.d("what is the file path", filePath)
+//       /document/raw:/storage/emulated/0/Download/Dune - Frank Herbert.epub
         filePath = modifyFilePath(filePath!!)
+        Log.d("what is the modified file path", filePath)
+//        /storage/emulated/0//storage/emulated/0/Download/Dune - Frank Herbert.epub
+        // and on op6
+//        D/what is the file path: /document/primary:Books/MoonReader/J.R.R. Tolkien - Complete eBook Collection [EN EPUB] [ebook] [p_s]/The Legend of Sigurd and Gudrun/The Legend of Sigurd and Gudrun - J. R. R. Tolkien.epub
+//        2020-11-03 10:01:41.140 8853-8853/com.speedpubread.oceo.speedread D/what is the modified file path: /Books/MoonReader/J.R.R. Tolkien - Complete eBook Collection [EN EPUB] [ebook] [p_s]/The Legend of Sigurd and Gudrun/The Legend of Sigurd and Gudrun - J. R. R. Tolkien.epub
+//        2020-11-03 10:01:41.142 8853-8853/com.speedpubread.oceo.speedread W/System.err: java.io.FileNotFoundException: /Books/MoonReader/J.R.R. Tolkien - Complete eBook Collection [EN EPUB] [ebook] [p_s]/The Legend of Sigurd and Gudrun/The Legend of Sigurd and Gudrun - J. R. R. Tolkien.epub: open failed: ENOENT (No such file or directory)
+
         selectionCallback!!.sendFilePath(filePath)
     }
 
