@@ -13,6 +13,7 @@ import com.speedpubread.oceo.speedread.BookListAdapter.MyViewHolder
 import com.speedpubread.oceo.speedread.BookSelectionFragment.RemoveChosenFile
 import com.speedpubread.oceo.speedread.BookSelectionFragment.SendChosenFile
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
 class BookListAdapter(private val mDataset: ArrayList<String>, private val bookList: List<String?>, val activity: Activity) : RecyclerView.Adapter<MyViewHolder>() {
@@ -20,6 +21,8 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
     private var bookRemovalCallback: RemoveChosenFile
     val WORD_KEY = "page"
     val TOTAL_WORDS = "total_words"
+    val CHAPTER_KEY = "chapter"
+
 
     // Provide a reference to the views for each data item
     // Complex data items may need more than one view per item, and
@@ -46,8 +49,18 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
         val bookName = mDataset[position]
         val bookDetails = PrefsUtil.readBookDetailsFromPrefs(activity = activity, bookName = bookName)?.let { it }
                 ?: HashMap()
-        val wordIdx = bookDetails[WORD_KEY]?.let { it.toFloat() } ?: 0.toFloat()
-        val totalWords = bookDetails[TOTAL_WORDS]?.let { it.toFloat() } ?: 1.toFloat()
+        val offsets = PrefsUtil.readBookChapterSizes(activity, bookName)!![bookName]
+        val offset = if (offsets == null || bookDetails[CHAPTER_KEY] == null) 0 else cumSum(offsets)[bookDetails[CHAPTER_KEY]!!.toInt()]
+//        Log.d("bookname: ", "----------------------bookName----------------------")
+//        Log.d("the chapter: ", bookDetails[CHAPTER_KEY].toString())
+//        Log.d("offsets: ", offsets.toString())
+
+//        Log.d("the offsets in adapter", offset.toString())
+//        Log.d("the check", "wordidx: ${bookDetails[WORD_KEY]} / max: ${bookDetails[TOTAL_WORDS]}\n\n")
+//        Log.d("ending: ", "----------------------------------------------------")
+
+        val wordIdx = bookDetails[WORD_KEY]?.let { (it.toInt() + offset).toFloat() } ?: 0.toFloat()
+        val totalWords = bookDetails[TOTAL_WORDS]?.toFloat() ?: 1.toFloat()
         val percentComplete = wordIdx / totalWords * 100
 
 
@@ -70,9 +83,13 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
         } else {
             holder.bookPercentage.text = "${percentComplete}%"
         }
-
-
     }
+
+    fun cumSum(nums: ArrayList<Int>): ArrayList<Int> {
+        var acc = 0
+        return nums.map { acc += it; acc } as ArrayList<Int>
+    }
+
 
     override fun getItemCount(): Int {
         return mDataset.size
