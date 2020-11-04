@@ -18,6 +18,7 @@ class Reader(var WPM: Long = 0,
              var currentWordIdx: Int = 0,
              var maxWordIdx: Int = 0,
              var currentChapter: Int = 0,
+             var wordOffset: Int = 0,
              activity: Activity,
              rootView: View,
 ) {
@@ -109,11 +110,11 @@ class Reader(var WPM: Long = 0,
         } else {
             chptProgressView.text = "$chapterCompleted%"
         }
-        chapterSeekBar.progress = currentWordIdx
+        chapterSeekBar.progress = currentWordIdx + wordOffset
     }
 
     fun getChapterPercentageComplete(): Float {
-        return currentWordIdx.toFloat() / maxWordIdx.toFloat() * 100
+        return (currentWordIdx + wordOffset).toFloat() / chapterSeeker.max * 100
     }
 
     fun getNextSentencesStartIdx(tokens: java.util.ArrayList<String>?, numSentences: Int, startIdx: Int): Int {
