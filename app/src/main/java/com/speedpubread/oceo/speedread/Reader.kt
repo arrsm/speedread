@@ -77,10 +77,10 @@ class Reader(var WPM: Long = 0,
         rangeObs = rangeObs.observeOn(AndroidSchedulers.mainThread())
 
         disposableReader = rangeObs.subscribe({ wordIdx: Any? ->
-            Log.d("The OBS", wordIdx.toString() + " / " + sentencesEndIdx.toString());
+//            Log.d("The OBS", wordIdx.toString() + " / " + sentencesEndIdx.toString());
             if (currSentenceIdx < displayStrs.size) {
-                Log.d("The OBS", "Is IN of Bounds")
-                Log.d(TAG, currentWordIdx.toString() + " / " + displayStrs.size.toString())
+//                Log.d("The OBS", "Is IN of Bounds")
+//                Log.d(TAG, currentWordIdx.toString() + " / " + displayStrs.size.toString())
                 currentChunkView.text = Html.fromHtml(displayStrs[currSentenceIdx].toString())
                 currentWordView.text = chapter!![currentWordIdx]
                 currSentenceIdx++

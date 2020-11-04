@@ -46,13 +46,13 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
         val bookName = mDataset[position]
         val bookDetails = PrefsUtil.readBookDetailsFromPrefs(activity = activity, bookName = bookName)?.let { it }
                 ?: HashMap()
-        val wordIdx = bookDetails!![WORD_KEY]?.let { it.toFloat() } ?: 0.toFloat()
+        val wordIdx = bookDetails[WORD_KEY]?.let { it.toFloat() } ?: 0.toFloat()
         val totalWords = bookDetails[TOTAL_WORDS]?.let { it.toFloat() } ?: 1.toFloat()
         val percentComplete = wordIdx / totalWords * 100
 
 
-        Log.d("the bookname here", bookName)
-        Log.d("the details are", bookDetails.toString())
+//        Log.d("the bookname here", bookName)
+//        Log.d("the details are", bookDetails.toString())
         holder.textView.text = mDataset[position].replace("asset__", "")
         holder.textView.setOnClickListener {
             val value = mDataset[position]
