@@ -88,7 +88,7 @@ class BookReaderFragment(val book: Book) : Fragment() {
     }
 
     override fun onResume() {
-        setReaderPositionFromPrefs(getStoryDetails())
+//        setReaderPositionFromPrefs(getStoryDetails())
         super.onResume()
     }
 
@@ -101,17 +101,17 @@ class BookReaderFragment(val book: Book) : Fragment() {
     fun saveBookDetailsToPrefs() {
         val bookDetails = getStoryDetails()
         val bookSize: String = if (bookDetails[TOTAL_WORDS] == null) getBookWords().size.toString() else bookDetails[TOTAL_WORDS]!!
-        val theBookChapters = getChapterTokens(book)
+        val chapterOffsets = getChapterTokens(book).map { it.size }
 
         bookDetails[TOTAL_WORDS] = bookSize
         bookDetails[WORD_KEY] = reader.currentWordIdx.toString()
-        Log.d("the current word is", bookDetails[WORD_KEY].toString())
-        bookDetails[SENTENCE_START_KEY] = reader.currSentenceStart.toString()
-
-        val chpt = getChapterWord(bookDetails[WORD_KEY]!!.toInt(), theBookChapters.map { it.size } as ArrayList<Int>)
-        bookDetails[CHAPTER_KEY] = chpt.toString()
+        bookDetails[SENTENCE_START_KEY] = reader.getSentenceStartIdx(reader.currentWordIdx).toString()
+        Log.d("Saving to Prefs",
+                "WORD_KEY: ${bookDetails[WORD_KEY]} " +
+                        "SENTENCE_START_KEY: " + "${bookDetails[SENTENCE_START_KEY]}")
 
         PrefsUtil.writeBookDetailsToPrefs(activity!!, chosenFileName!!, bookDetails)
+
     }
 
     fun getChapterWord(word: Int, chapterLengths: ArrayList<Int>): Int {
@@ -143,10 +143,33 @@ class BookReaderFragment(val book: Book) : Fragment() {
                 "readerCurrWord: ${reader.currentWordIdx} " + "sentenceStart: ${reader.currSentenceStart}")
 
 
-        reader.maxWordIdx = tokens.size
         reader.currentChapter = chapterId
-        chapterSeekBar!!.max = tokens.size
+        reader.maxWordIdx = tokens.size
+        chapterSeekBar!!.max = getBookTotalWords().toInt()
+        reader.resumeReading(tokens)
+    }
+
+    fun flipChapter(chapterId: Int) {
+        val chapter = parseChapter(book, chapterId)
+        val chapterText = StringBuilder(chapter!!)
+        val tokens = getWordTokens(chapterText.toString())?.let { tokensToArrayList(it) }
+                ?: ArrayList()
+
+        Log.d("flipChapter:", "currentChapter: ${chapterId} maxWordIdx: ${tokens.size}")
+        Log.d("readerDetails",
+                "readerCurrWord: ${reader.currentWordIdx} " + "sentenceStart: ${reader.currSentenceStart}")
+
+
+        reader.currentChapter = chapterId
+        reader.maxWordIdx = tokens.size
+        chapterSeekBar!!.max = getBookTotalWords().toInt()
         reader.loadChapter(tokens)
+    }
+
+    fun getBookTotalWords(): String {
+        val bookDetails = getStoryDetails()
+        val bookSize: String = if (bookDetails[TOTAL_WORDS] == null) getBookWords().size.toString() else bookDetails[TOTAL_WORDS]!!
+        return bookSize
     }
 
     fun readBook() {
@@ -173,12 +196,17 @@ class BookReaderFragment(val book: Book) : Fragment() {
     }
 
     fun setReaderPositionFromPrefs(bookDetails: HashMap<String, String>) {
-        val tempChpt = bookDetails[CHAPTER_KEY]
-        val tempWord = bookDetails[WORD_KEY]
+        val chapterOffsets = getChapterTokens(book).map { it.size - 1 }
+        val bookDetails = getStoryDetails()
+
+        val tempChpt = if (bookDetails[CHAPTER_KEY] == null) 0 else bookDetails[CHAPTER_KEY]!!.toInt()
+        val offset = chapterOffsets[tempChpt]
+
+        val tempWord = if (bookDetails[WORD_KEY] == null) 0 else bookDetails[WORD_KEY]!!.toInt()
         val tempSentenceStart = bookDetails[SENTENCE_START_KEY]
 
-        reader.currentChapter = if (tempChpt == null) 0 else Integer.valueOf(tempChpt)
-        reader.currentWordIdx = if (tempWord == null) 0 else Integer.valueOf(tempWord)
+        reader.currentChapter = tempChpt
+        reader.currentWordIdx = tempWord
         reader.currSentenceStart = if (tempSentenceStart == null) 0 else Integer.valueOf(tempSentenceStart)
     }
 

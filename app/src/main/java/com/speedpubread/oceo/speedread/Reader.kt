@@ -167,11 +167,18 @@ class Reader(var WPM: Long = 0,
         iterateWords()
     }
 
+    fun resumeReading(chapter: ArrayList<String>) {
+        disposeListener()
+        this.chapter = chapter
+        currSentenceIdx = 0
+        iterateWords()
+    }
+
     fun loadChapter(chapter: ArrayList<String>) {
         disposeListener()
         this.chapter = chapter
-//        currSentenceStart = 0
-//        currentWordIdx = 0
+        currSentenceStart = 0
+        currentWordIdx = 0
         currSentenceIdx = 0
         iterateWords()
     }
