@@ -87,11 +87,11 @@ class BookSelectionFragment : Fragment() {
         otherwise no access to the filepath var as it can not be returned. Im sure there's a better
         way tod o this
     */
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
 //        Log.d("result", requestCode.toString())
         when (requestCode) {
             1 -> if (resultCode == -1) {
-                val fileUri = data.data
+                val fileUri = data?.data
                 Log.d("the uri", fileUri.toString())
                 filePath = fileUri?.path
             }
