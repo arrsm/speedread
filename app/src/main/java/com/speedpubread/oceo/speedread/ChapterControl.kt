@@ -33,7 +33,7 @@ class ChapterControl(val context: BookReaderFragment,
                 currentChapterview.text = "Section: ${nextChapter + 1}/${maxChapter}"
                 storyConfig[CHAPTER_KEY] = nextChapter.toString()
                 PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, storyConfig)
-                context.readChapter(nextChapter)
+                context.flipChapter(nextChapter)
             }
         })
         lowerChapterButton.setOnClickListener(View.OnClickListener {
@@ -42,7 +42,7 @@ class ChapterControl(val context: BookReaderFragment,
                 currentChapterview.text = "Section: ${prevChapter + 1}/${maxChapter}"
                 storyConfig[CHAPTER_KEY] = prevChapter.toString()
                 PrefsUtil.writeBookDetailsToPrefs(activity, chosenFileName, storyConfig)
-                context.readChapter(prevChapter)
+                context.flipChapter(prevChapter)
             }
         })
         currentChapterview.text = "Section: ${reader.currentChapter + 1}/${maxChapter}"
