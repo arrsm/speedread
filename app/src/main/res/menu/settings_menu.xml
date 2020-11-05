@@ -4,6 +4,10 @@
         android:id="@+id/wpm_menu_option"
         android:title="speed" />
     <item
-        android:id="@+id/color_menu_item"
-        android:title="color" />
+        android:id="@+id/dark_menu_item"
+        android:title="dark" />
+
+    <item
+        android:id="@+id/light_menu_item"
+        android:title="light" />
 </menu>
