@@ -18,6 +18,7 @@ class Reader(var WPM: Long = 0,
              var currentWordIdx: Int = 0,
              var maxWordIdx: Int = 0,
              var currentChapter: Int = 0,
+             var wordOffset: Int = 0,
              activity: Activity,
              rootView: View,
 ) {
@@ -77,10 +78,10 @@ class Reader(var WPM: Long = 0,
         rangeObs = rangeObs.observeOn(AndroidSchedulers.mainThread())
 
         disposableReader = rangeObs.subscribe({ wordIdx: Any? ->
-            Log.d("The OBS", wordIdx.toString() + " / " + sentencesEndIdx.toString());
+//            Log.d("The OBS", wordIdx.toString() + " / " + sentencesEndIdx.toString());
             if (currSentenceIdx < displayStrs.size) {
-                Log.d("The OBS", "Is IN of Bounds")
-                Log.d(TAG, currentWordIdx.toString() + " / " + displayStrs.size.toString())
+//                Log.d("The OBS", "Is IN of Bounds")
+//                Log.d(TAG, currentWordIdx.toString() + " / " + displayStrs.size.toString())
                 currentChunkView.text = Html.fromHtml(displayStrs[currSentenceIdx].toString())
                 currentWordView.text = chapter!![currentWordIdx]
                 currSentenceIdx++
@@ -109,11 +110,11 @@ class Reader(var WPM: Long = 0,
         } else {
             chptProgressView.text = "$chapterCompleted%"
         }
-        chapterSeekBar.progress = currentWordIdx
+        chapterSeekBar.progress = currentWordIdx + wordOffset
     }
 
     fun getChapterPercentageComplete(): Float {
-        return currentWordIdx.toFloat() / maxWordIdx.toFloat() * 100
+        return (currentWordIdx + wordOffset).toFloat() / chapterSeeker.max * 100
     }
 
     fun getNextSentencesStartIdx(tokens: java.util.ArrayList<String>?, numSentences: Int, startIdx: Int): Int {
@@ -167,11 +168,18 @@ class Reader(var WPM: Long = 0,
         iterateWords()
     }
 
+    fun resumeReading(chapter: ArrayList<String>) {
+        disposeListener()
+        this.chapter = chapter
+        currSentenceIdx = 0
+        iterateWords()
+    }
+
     fun loadChapter(chapter: ArrayList<String>) {
         disposeListener()
         this.chapter = chapter
-//        currSentenceStart = 0
-//        currentWordIdx = 0
+        currSentenceStart = 0
+        currentWordIdx = 0
         currSentenceIdx = 0
         iterateWords()
     }
