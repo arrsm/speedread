@@ -59,12 +59,14 @@ class BookReaderFragment(val book: Book) : Fragment() {
         currentChunkView!!.movementMethod = ScrollingMovementMethod()
 
         val storyConfig = getStoryDetails() // metadata about user pos in book
+        val chapter = storyConfig[CHAPTER_KEY]!!.toInt()
 
+        getChapterTitle(chapter)
         // TODO  make own function based on prefs
 //        val offsets = getChapterTokens(book).map { it.size }
 //        val offset = offsets[storyConfig[CHAPTER_KEY]!!.toInt()]
 
-        reader = Reader(activity = activity!!, rootView = rootView, currentChapter = storyConfig[CHAPTER_KEY]!!.toInt())
+        reader = Reader(activity = activity!!, rootView = rootView, currentChapter = chapter)
         wpm = WPM(activity!!, rootView, reader)
         setReaderPositionFromPrefs(storyConfig)
         readChapter(storyConfig[CHAPTER_KEY]!!.toInt()) // sets some reader attrb reqd for seeker
@@ -110,23 +112,23 @@ class BookReaderFragment(val book: Book) : Fragment() {
         PrefsUtil.writeChapterSizes(activity!!, chosenFileName!!, chapterOffsets)
     }
 
-    fun getChapterWord(word: Int, chapterLengths: ArrayList<Int>): Int {
-        val cumSum = cumSum(chapterLengths)
-//        Log.d("the chapter lengths are", chapterLengths.toString())
-//        Log.d("the cum sum is", cumSum.toString())
-//        Log.d("Length comparison", "chapters: ${chapterLengths.size} sum:${cumSum.size}")
-        var i = 0
-        while (word > cumSum[i]) {
-            i += 1
-        }
-        return i + 1
+    fun getChapterTitle(chapter: Int) {
+        Log.d(TAG, "--------------ToC checking----------------")
+        val theBook = book
+        val ToC = book.tableOfContents
+        val uniqueResources = ToC.allUniqueResources
+        val references = ToC.tocReferences
+
+        val spine = book.spine
+        val spineRefs = spine.spineReferences
+        Log.d(TAG, "--------------END ToC checking----------------")
+
     }
 
     fun cumSum(nums: ArrayList<Int>): ArrayList<Int> {
         var acc = 0
         return nums.map { acc += it; acc } as ArrayList<Int>
     }
-
 
     fun readChapter(chapterId: Int) {
         val chapter = parseChapter(book, chapterId)
@@ -211,7 +213,6 @@ class BookReaderFragment(val book: Book) : Fragment() {
                 ?: getChapterTokens(book).map { it.size - 1 } as ArrayList<Int>)
     }
 
-
     fun getUserConfigFromPrefs() {
         val WPM = PrefsUtil.readLongFromPrefs(activity!!, "wpm")
         val sentenceDelay = PrefsUtil.readLongFromPrefs(activity!!, "sentence_delay")
@@ -237,5 +238,18 @@ class BookReaderFragment(val book: Book) : Fragment() {
             story.add(tokens.nextToken())
         }
         return story
+    }
+
+    fun getChapterWord(word: Int, chapterLengths: ArrayList<Int>): Int {
+        // given a word, and chapter lengths determine which chapter the word belongs too
+        val cumSum = cumSum(chapterLengths)
+//        Log.d("the chapter lengths are", chapterLengths.toString())
+//        Log.d("the cum sum is", cumSum.toString())
+//        Log.d("Length comparison", "chapters: ${chapterLengths.size} sum:${cumSum.size}")
+        var i = 0
+        while (word > cumSum[i]) {
+            i += 1
+        }
+        return i + 1
     }
 }
