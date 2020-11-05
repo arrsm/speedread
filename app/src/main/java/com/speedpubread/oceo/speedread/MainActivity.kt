@@ -29,6 +29,7 @@ class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
         if (savedInstanceState == null) {
             addBookSelectionFragment()
         }
+        setTheme(R.style.AppThemeDark)
     }
 
     fun setupFirebase() {
@@ -100,44 +101,36 @@ class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
         return true
     }
 
+    fun setReaderColors(backgroundColor: Int, textColor: Int) {
+        val readerContainer: View = findViewById(R.id.reader_container)
+        val readerItemTitle: TextView = findViewById(R.id.item_title)
+        val chapterText: TextView = findViewById(R.id.current_chapter)
+        val wordText: TextView = findViewById(R.id.current_word)
+        val chunkText: TextView = findViewById(R.id.current_chunk)
+        val wpmText: TextView = findViewById(R.id.current_wpm_view)
+        readerContainer.setBackgroundColor(backgroundColor)
+        readerItemTitle.setTextColor(textColor)
+        chapterText.setTextColor(textColor)
+        wordText.setTextColor(textColor)
+        chunkText.setTextColor(textColor)
+        wpmText.setTextColor(textColor)
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.dark_menu_item -> {
                 Log.d(TAG, "select dark mode")
-//                val mainContainer: View = findViewById(R.id.main_container)
-//                mainContainer.setBackgroundColor(Color.BLACK)
-                
-                val readerContainer: View = findViewById(R.id.reader_container)
-                val readerItemTitle: TextView = findViewById(R.id.item_title)
-                val chapterText: TextView = findViewById(R.id.current_chapter)
-                val wordText: TextView = findViewById(R.id.current_word)
-                val chunkText: TextView = findViewById(R.id.current_chunk)
-                val wpmText: TextView = findViewById(R.id.current_wpm_view)
-                readerContainer.setBackgroundColor(Color.BLACK)
-                readerItemTitle.setTextColor(Color.WHITE)
-                chapterText.setTextColor(Color.WHITE)
-                wordText.setTextColor(Color.WHITE)
-                chunkText.setTextColor(Color.WHITE)
-                wpmText.setTextColor(Color.WHITE)
+                val mainContainer: View = findViewById(R.id.main_container)
+                mainContainer.setBackgroundColor(Color.BLACK)
+                setTheme(R.style.AppThemeDark)
                 true
             }
             R.id.light_menu_item -> {
                 Log.d(TAG, "select light mode")
-//                val mainContainer: View = findViewById(R.id.main_container)
-//                mainContainer.setBackgroundColor(Color.GRAY)
+                val mainContainer: View = findViewById(R.id.main_container)
+                mainContainer.setBackgroundColor(Color.GRAY)
+                setTheme(R.style.AppThemeLight)
 
-                val readerContainer: View = findViewById(R.id.reader_container)
-                val readerItemTitle: TextView = findViewById(R.id.item_title)
-                val chapterText: TextView = findViewById(R.id.current_chapter)
-                val wordText: TextView = findViewById(R.id.current_word)
-                val chunkText: TextView = findViewById(R.id.current_chunk)
-                val wpmText: TextView = findViewById(R.id.current_wpm_view)
-                readerContainer.setBackgroundColor(Color.GRAY)
-                readerItemTitle.setTextColor(Color.BLACK)
-                chapterText.setTextColor(Color.BLACK)
-                wordText.setTextColor(Color.BLACK)
-                chunkText.setTextColor(Color.BLACK)
-                wpmText.setTextColor(Color.BLACK)
                 true
             }
             R.id.wpm_menu_option -> {

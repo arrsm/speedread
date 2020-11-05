@@ -58,6 +58,7 @@ class BookReaderFragment(val book: Book) : Fragment() {
         titleView!!.text = chosenFileName?.replace("asset__", "")
         currentChunkView!!.movementMethod = ScrollingMovementMethod()
 
+
         val storyConfig = getStoryDetails() // metadata about user pos in book
         val chapter = storyConfig[CHAPTER_KEY]!!.toInt()
 
