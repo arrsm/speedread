@@ -1,10 +1,13 @@
 package com.speedpubread.oceo.speedread
 
 import android.app.Activity
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentManager
@@ -99,9 +102,47 @@ class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.color_menu_item ->                 // Action goes here
+            R.id.dark_menu_item -> {
+                Log.d(TAG, "select dark mode")
+//                val mainContainer: View = findViewById(R.id.main_container)
+//                mainContainer.setBackgroundColor(Color.BLACK)
+                
+                val readerContainer: View = findViewById(R.id.reader_container)
+                val readerItemTitle: TextView = findViewById(R.id.item_title)
+                val chapterText: TextView = findViewById(R.id.current_chapter)
+                val wordText: TextView = findViewById(R.id.current_word)
+                val chunkText: TextView = findViewById(R.id.current_chunk)
+                val wpmText: TextView = findViewById(R.id.current_wpm_view)
+                readerContainer.setBackgroundColor(Color.BLACK)
+                readerItemTitle.setTextColor(Color.WHITE)
+                chapterText.setTextColor(Color.WHITE)
+                wordText.setTextColor(Color.WHITE)
+                chunkText.setTextColor(Color.WHITE)
+                wpmText.setTextColor(Color.WHITE)
                 true
-            R.id.wpm_menu_option -> true
+            }
+            R.id.light_menu_item -> {
+                Log.d(TAG, "select light mode")
+//                val mainContainer: View = findViewById(R.id.main_container)
+//                mainContainer.setBackgroundColor(Color.GRAY)
+
+                val readerContainer: View = findViewById(R.id.reader_container)
+                val readerItemTitle: TextView = findViewById(R.id.item_title)
+                val chapterText: TextView = findViewById(R.id.current_chapter)
+                val wordText: TextView = findViewById(R.id.current_word)
+                val chunkText: TextView = findViewById(R.id.current_chunk)
+                val wpmText: TextView = findViewById(R.id.current_wpm_view)
+                readerContainer.setBackgroundColor(Color.GRAY)
+                readerItemTitle.setTextColor(Color.BLACK)
+                chapterText.setTextColor(Color.BLACK)
+                wordText.setTextColor(Color.BLACK)
+                chunkText.setTextColor(Color.BLACK)
+                wpmText.setTextColor(Color.BLACK)
+                true
+            }
+            R.id.wpm_menu_option -> {
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
