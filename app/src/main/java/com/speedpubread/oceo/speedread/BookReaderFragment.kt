@@ -188,7 +188,9 @@ class BookReaderFragment(val book: Book) : Fragment() {
         //  use this in place of above to return tokens by chapter
         val fullBook = parseBook(book)
         val chaptersText = fullBook.map { StringBuilder(it.toString()) }
-        val chaptersTokens = chaptersText.map { tokensToArrayList(getWordTokens(it.toString())!!) }
+        val chaptersTokens = chaptersText.map {
+            tokensToArrayList(getWordTokens(it.toString())!!)
+        }
         return chaptersTokens
     }
 
@@ -227,8 +229,8 @@ class BookReaderFragment(val book: Book) : Fragment() {
 
 
     fun getWordTokens(words: String?): StringTokenizer? {
-        return if (words == null || words.isEmpty()) {
-            null
+        return if (words == null) {
+            StringTokenizer(" . ")
         } else StringTokenizer(words, " \t\n\r\u000C", false)
     }
 
