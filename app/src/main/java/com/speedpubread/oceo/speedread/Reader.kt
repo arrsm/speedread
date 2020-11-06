@@ -157,7 +157,8 @@ class Reader(var WPM: Long = 0,
 
     fun getSentenceStartIdx(idx: Int): Int {
         var temp = idx
-        while (!chapter!![temp].contains(".") && temp > 0) {
+        if (temp >= chapter!!.size) return 0
+        while (temp > 0 && !chapter!![temp].contains(".")) {
             temp -= 1
         }
         return temp + 1
