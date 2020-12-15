@@ -24,11 +24,12 @@
                 android:layout_height="wrap_content"
                 android:layout_centerVertical="true"
                 android:paddingLeft="8dp"
-                android:textColor="@color/colorPrimary"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
+
+            <!--                android:textColor="@color/colorPrimary"-->
 
             <TextView
                 android:id="@+id/book_percentage"
@@ -37,11 +38,11 @@
                 android:layout_centerVertical="true"
                 android:paddingLeft="8dp"
                 android:text="50%"
-                android:textColor="@color/colorPrimary"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/book_title" />
+            <!--            android:textColor="@color/colorPrimary"-->
 
             <Button
                 android:id="@+id/delete_btn"
