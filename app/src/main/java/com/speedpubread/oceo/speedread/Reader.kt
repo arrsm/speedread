@@ -89,7 +89,7 @@ class Reader(var WPM: Long = 0,
                 setSeekBarData(chptProgressView, chapterSeeker)
             } else {
 //                Log.d("The OBS", "Is Out of Bounds")
-                Log.d(TAG, currentWordIdx.toString() + " / " + displayStrs.size.toString())
+//                Log.d(TAG, currentWordIdx.toString() + " / " + displayStrs.size.toString())
             }
         },
                 { e: Any? -> }

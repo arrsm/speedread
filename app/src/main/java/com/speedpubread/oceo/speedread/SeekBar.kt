@@ -69,7 +69,7 @@ class Seeker(rootView: View, val reader: Reader, val max: Int = 0, val min: Int 
     }
 
     fun getChapterPercentageComplete(): Float {
-        Log.d("the percentage calculation: ", "${reader.currentWordIdx} / $max = ${reader.currentWordIdx.toFloat() / max}")
+//        Log.d("the percentage calculation: ", "${reader.currentWordIdx} / $max = ${reader.currentWordIdx.toFloat() / max}")
         return reader.currentWordIdx.toFloat() / max
     }
 

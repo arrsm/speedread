@@ -92,14 +92,14 @@ class BookSelectionFragment : Fragment() {
         when (requestCode) {
             1 -> if (resultCode == -1) {
                 val fileUri = data?.data
-                Log.d("the uri", fileUri.toString())
+//                Log.d("the uri", fileUri.toString())
                 filePath = fileUri?.path
             }
         }
-        Log.d("what is the file path", filePath)
+//        Log.d("what is the file path", filePath)
 //       /document/raw:/storage/emulated/0/Download/Dune - Frank Herbert.epub
         filePath = modifyFilePath(filePath!!)
-        Log.d("what is the modified file path", filePath)
+//        Log.d("what is the modified file path", filePath)
 //        /storage/emulated/0//storage/emulated/0/Download/Dune - Frank Herbert.epub
         // and on op6
 //        D/what is the file path: /document/primary:Books/MoonReader/J.R.R. Tolkien - Complete eBook Collection [EN EPUB] [ebook] [p_s]/The Legend of Sigurd and Gudrun/The Legend of Sigurd and Gudrun - J. R. R. Tolkien.epub

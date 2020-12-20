@@ -18,15 +18,15 @@ class FileSelector : AppCompatActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         // file permission request callback
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        Log.d("permissionsReqResult", requestCode.toString())
+//        Log.d("permissionsReqResult", requestCode.toString())
         when (requestCode) {
             EXTERNAL_STORAGE_READ_PERMISSION_REQ -> {
-                Log.d(TAG, "Read External storage Permission")
+//                Log.d(TAG, "Read External storage Permission")
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     Log.v(TAG, "Permission: " + permissions[0] + "was " + grantResults[0])
                     launchFileChooser(frag)
                 } else {
-                    Log.d("Permission", "File Perm not granted")
+//                    Log.d("Permission", "File Perm not granted")
                 }
             }
         }
