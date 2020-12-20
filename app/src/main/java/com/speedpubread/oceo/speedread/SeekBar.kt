@@ -6,7 +6,11 @@ import android.view.View
 import android.widget.SeekBar
 import android.widget.TextView
 
-class Seeker(rootView: View, val reader: Reader, val max: Int = 0, val min: Int = 0) {
+class Seeker(rootView: View,
+             val reader: Reader,
+             val max: Int = 0,
+             val min: Int = 0,
+             var wordOffset: Int = 0) {
 
     val chapterSeekBar: SeekBar = rootView.findViewById(R.id.seekBar)
     val chptProgressView: TextView = rootView.findViewById(R.id.chapter_progress_view)

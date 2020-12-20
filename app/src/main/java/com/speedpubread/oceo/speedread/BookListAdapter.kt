@@ -1,12 +1,14 @@
 package com.speedpubread.oceo.speedread
 
 import android.app.Activity
+import android.text.Layout
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import com.speedpubread.oceo.speedread.BookListAdapter.MyViewHolder
@@ -32,11 +34,13 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
         var textView: TextView
         var deleteButton: Button
         var bookPercentage: TextView
+        var container: ConstraintLayout
 
         init {
             textView = v.findViewById(R.id.book_title)
             deleteButton = v.findViewById(R.id.delete_btn)
             bookPercentage = v.findViewById(R.id.book_percentage)
+            container = v.findViewById(R.id.book_card_container)
         }
     }
 
@@ -67,6 +71,12 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
 
 //        Log.d("the bookname here", bookName)
 //        Log.d("the details are", bookDetails.toString())
+        holder.container.setOnClickListener {
+            val value = mDataset[position]
+//            Log.d("ADAPTER", "onItemSelected: " + mDataset[position])
+            selectionCallback.sendFilePath(bookList[position])
+        }
+
         holder.textView.text = mDataset[position].replace("asset__", "")
         holder.textView.setOnClickListener {
             val value = mDataset[position]

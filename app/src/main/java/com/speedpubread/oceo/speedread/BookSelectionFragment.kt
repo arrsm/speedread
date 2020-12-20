@@ -96,7 +96,7 @@ class BookSelectionFragment : Fragment() {
                 filePath = fileUri?.path
             }
         }
-//        Log.d("what is the file path", filePath)
+//        Log.d("file path", filePath)
 //       /document/raw:/storage/emulated/0/Download/Dune - Frank Herbert.epub
         filePath = modifyFilePath(filePath!!)
 //        Log.d("what is the modified file path", filePath)
