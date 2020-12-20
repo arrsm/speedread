@@ -49,7 +49,8 @@ class BookListAdapter(private val mDataset: ArrayList<String>, private val bookL
         val bookName = mDataset[position]
         val bookDetails = PrefsUtil.readBookDetailsFromPrefs(activity = activity, bookName = bookName)?.let { it }
                 ?: HashMap()
-        val offsets = PrefsUtil.readBookChapterSizes(activity, bookName)!![bookName]
+        val offsetBooks = PrefsUtil.readBookChapterSizes(activity, bookName)
+        val offsets = if (offsetBooks != null) offsetBooks[bookName] else null
         val offset = if (offsets == null || bookDetails[CHAPTER_KEY] == null) 0 else cumSum(offsets)[bookDetails[CHAPTER_KEY]!!.toInt()]
 //        Log.d("bookname: ", "----------------------bookName----------------------")
 //        Log.d("the chapter: ", bookDetails[CHAPTER_KEY].toString())

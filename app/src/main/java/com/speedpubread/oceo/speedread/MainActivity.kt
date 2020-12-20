@@ -119,21 +119,17 @@ class MainActivity : AppCompatActivity(), SendChosenFile, RemoveChosenFile {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.dark_menu_item -> {
-                Log.d(TAG, "select dark mode")
+//                Log.d(TAG, "select dark mode")
                 val mainContainer: View = findViewById(R.id.main_container)
                 mainContainer.setBackgroundColor(Color.BLACK)
                 setTheme(R.style.AppThemeDark)
                 true
             }
             R.id.light_menu_item -> {
-                Log.d(TAG, "select light mode")
+//                Log.d(TAG, "select light mode")
                 val mainContainer: View = findViewById(R.id.main_container)
                 mainContainer.setBackgroundColor(Color.GRAY)
                 setTheme(R.style.AppThemeLight)
-
-                true
-            }
-            R.id.wpm_menu_option -> {
                 true
             }
             else -> super.onOptionsItemSelected(item)

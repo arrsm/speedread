@@ -20,6 +20,6 @@ class TouchSelection() {
             textSelectionMenu!!.setMetadata(chosenFileName, currentChapter, currSentenceStart)
             currentChunkView.customSelectionActionModeCallback = textSelectionMenu
         }
-        Log.d("text selection", "($mTouchX, $mTouchY)")
+//        Log.d("text selection", "($mTouchX, $mTouchY)")
     }
 }
