@@ -26,8 +26,11 @@ class Reader(var WPM: Long = 0,
     private val TAG = "Reader"
     val currentChunkView: TextView = rootView.findViewById(R.id.current_chunk)
     val currentWordView: TextView = rootView.findViewById(R.id.current_word)
+
+    // TODO move these into seekbar logic insted of reader logic
     val chptProgressView: TextView = rootView.findViewById(R.id.chapter_progress_view)
     val chapterSeeker: SeekBar = rootView.findViewById(R.id.seekBar)
+
     var disposableReader: Disposable? = null
     val WPM_KEY = "wpm"
     val SENTENCE_DELAY_KEY = "sentence_delay"

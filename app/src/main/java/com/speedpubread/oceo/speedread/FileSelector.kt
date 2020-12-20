@@ -35,7 +35,6 @@ class FileSelector : AppCompatActivity() {
     companion object {
         @JvmStatic
         fun launchFileChooser(frag: Fragment?) {
-            // TODO https://developer.android.com/reference/android/content/Intent.html
             var chooseFile = Intent(Intent.ACTION_GET_CONTENT)
             chooseFile.type = "*/*"
             chooseFile = Intent.createChooser(chooseFile, "Choose a file")
