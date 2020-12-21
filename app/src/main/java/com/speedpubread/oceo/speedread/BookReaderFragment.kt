@@ -67,12 +67,17 @@ class BookReaderFragment(val book: Book) : Fragment() {
 //        val offsets = getChapterTokens(book).map { it.size }
 //        val offset = offsets[storyConfig[CHAPTER_KEY]!!.toInt()]
 
-        reader = Reader(activity = activity!!, rootView = rootView, currentChapter = chapter)
+        // TODO provide seeker with info on current word as well rather than relying on the reader to do it
+        seeker = Seeker(rootView, max = getBookTotalWords().toInt())
+        reader = Reader(activity = activity!!, rootView = rootView, currentChapter = chapter, seeker = seeker)
         wpm = WPM(activity!!, rootView, reader)
+        // TODO obtain the values for this stuff and provide to reader, rather than creating the reader first
+        // and and then pulling the info to set
         setReaderPositionFromPrefs(storyConfig)
+
         readChapter(storyConfig[CHAPTER_KEY]!!.toInt()) // sets some reader attrb reqd for seeker
+
         chapterControl = ChapterControl(this, activity!!, rootView, reader, storyConfig, chosenFileName!!, book)
-        seeker = Seeker(rootView, reader, max = getBookTotalWords().toInt())
 
         pauseResumeBtn!!.setOnClickListener(View.OnClickListener {
             if (!reader.disposableReader!!.isDisposed) {
@@ -196,13 +201,13 @@ class BookReaderFragment(val book: Book) : Fragment() {
 
     fun setReaderPositionFromPrefs(bookDetails: HashMap<String, String>) {
         val bookDetails = getStoryDetails()
-
+        val tempWord = if (bookDetails[WORD_KEY] == null) 0 else bookDetails[WORD_KEY]!!.toInt()
         val tempChpt = if (bookDetails[CHAPTER_KEY] == null) 0 else bookDetails[CHAPTER_KEY]!!.toInt()
+        val tempSentenceStart = bookDetails[SENTENCE_START_KEY]
+
         val chapterOffsets = getChapterOffsets()
         val offset = if (chapterOffsets != null) chapterOffsets[tempChpt] else 0
 
-        val tempWord = if (bookDetails[WORD_KEY] == null) 0 else bookDetails[WORD_KEY]!!.toInt()
-        val tempSentenceStart = bookDetails[SENTENCE_START_KEY]
 
         reader.currentChapter = tempChpt
         reader.currentWordIdx = tempWord
@@ -211,7 +216,7 @@ class BookReaderFragment(val book: Book) : Fragment() {
     }
 
     fun getChapterOffsets(): ArrayList<Int>? {
-        // check if available from prefs if not calculate it
+        // check if available from prefs if not calculate offsets for each section
         val chapterBookSizes = PrefsUtil.readBookChapterSizes(activity!!, chosenFileName!!)
         if (chapterBookSizes == null) return null
         return cumSum(chapterBookSizes[chosenFileName!!]

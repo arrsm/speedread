@@ -128,7 +128,7 @@ object PrefsUtil {
         val sharedPref = activity.getPreferences(Context.MODE_PRIVATE)
         val editor = sharedPref.edit()
         val chapterSizes = readBookChapterSizes(activity, book) ?: HashMap()
-        Log.d("chaptersizes", chapterSizes.toString())
+//        Log.d("chaptersizes", chapterSizes.toString())
         chapterSizes[book] = chapterLengths
         val gson = Gson()
         val insertVal = gson.toJson(chapterSizes)
