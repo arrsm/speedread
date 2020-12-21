@@ -7,10 +7,8 @@ import android.widget.SeekBar
 import android.widget.TextView
 
 class Seeker(rootView: View,
-             val reader: Reader,
              val max: Int = 0,
-             val min: Int = 0,
-             var wordOffset: Int = 0) {
+             val min: Int = 0) {
 
     val chapterSeekBar: SeekBar = rootView.findViewById(R.id.seekBar)
     val chptProgressView: TextView = rootView.findViewById(R.id.chapter_progress_view)
@@ -23,13 +21,7 @@ class Seeker(rootView: View,
 
     @SuppressLint("SetTextI18n")
     fun setupSeekbar() {
-        chapterSeekBar.progress = reader.currentWordIdx
-        val chptPercentageComplete = getChapterPercentageComplete()
-        if (chptPercentageComplete.toString().length > 3) {
-            chptProgressView.setText(chptPercentageComplete.toString().substring(0, 4) + "%")
-        } else {
-            chptProgressView.setText("$chptPercentageComplete%")
-        }
+        Log.d("init seekbar", "max: " + max.toString())
 
         chapterSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
@@ -63,6 +55,16 @@ class Seeker(rootView: View,
         })
     }
 
+    fun setSeekBarData(wordOffset: Int, currentWordIdx: Int) {
+        val chptPercentageComplete = getChapterPercentageComplete(currentWordIdx, wordOffset)
+        if (chptPercentageComplete.toString().length > 3) {
+            chptProgressView.setText(chptPercentageComplete.toString().substring(0, 4) + "%")
+        } else {
+            chptProgressView.setText("$chptPercentageComplete%")
+        }
+        chapterSeekBar.progress = currentWordIdx + wordOffset
+    }
+
     fun setSeekerMax(maxVal: Int) {
         chapterSeekBar.max = maxVal
     }
@@ -72,9 +74,9 @@ class Seeker(rootView: View,
 
     }
 
-    fun getChapterPercentageComplete(): Float {
+    fun getChapterPercentageComplete(currentWordIdx: Int, wordOffset: Int): Float {
 //        Log.d("the percentage calculation: ", "${reader.currentWordIdx} / $max = ${reader.currentWordIdx.toFloat() / max}")
-        return reader.currentWordIdx.toFloat() / max
+        return (currentWordIdx + wordOffset).toFloat() / max * 100
     }
 
 }
