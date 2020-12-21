@@ -105,7 +105,8 @@ class BookReaderFragment(val book: Book) : Fragment() {
     fun saveBookDetailsToPrefs() {
         val bookDetails = getStoryDetails()
         val bookSize: String = if (bookDetails[TOTAL_WORDS] == null) getBookWords().size.toString() else bookDetails[TOTAL_WORDS]!!
-        val chapterOffsets = getChapterTokens(book).map { it.size - 1 } as ArrayList
+        val chapterOffsets = getChapterTokens(book).map { it.size } as ArrayList
+        chapterOffsets.add(0, 0) // add 0 index
 
         bookDetails[TOTAL_WORDS] = bookSize
         bookDetails[WORD_KEY] = reader.currentWordIdx.toString()
@@ -220,7 +221,7 @@ class BookReaderFragment(val book: Book) : Fragment() {
         val chapterBookSizes = PrefsUtil.readBookChapterSizes(activity!!, chosenFileName!!)
         if (chapterBookSizes == null) return null
         return cumSum(chapterBookSizes[chosenFileName!!]
-                ?: getChapterTokens(book).map { it.size - 1 } as ArrayList<Int>)
+                ?: getChapterTokens(book).map { it.size } as ArrayList<Int>)
     }
 
     fun getUserConfigFromPrefs() {

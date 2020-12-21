@@ -82,14 +82,14 @@ class Reader(var WPM: Long = 0,
         disposableReader = rangeObs.subscribe({ wordIdx: Any? ->
 //            Log.d("wordIdx / sentencesEndIdx", wordIdx.toString() + " / " + sentencesEndIdx.toString());
             if (currSentenceIdx < displayStrs.size) {
-//                Log.d("IN BOUNDS currSentenceIdx / displayStrs.size", currSentenceIdx.toString() + " / " + displayStrs.size.toString())
+//                Log.d("IN BOUNDS word / sentence.size", currSentenceIdx.toString() + " / " + displayStrs.size.toString())
                 currentChunkView.text = Html.fromHtml(displayStrs[currSentenceIdx].toString())
                 currentWordView.text = chapter!![currentWordIdx]
                 currSentenceIdx++
                 currentWordIdx++
                 seeker.setSeekBarData(wordOffset, currentWordIdx)
             } else {
-                Log.d("OUT OF BOUNDS: currentWordIdx / displayStrs.size", currentWordIdx.toString() + " / " + displayStrs.size.toString())
+//                Log.d("OUT OF BOUNDS: currentWordIdx / displayStrs.size", currentWordIdx.toString() + " / " + displayStrs.size.toString())
             }
         }, { e: Any? -> }) {
             // FINALLY
