@@ -48,9 +48,17 @@ class Seeker(rootView: View,
 //                    Log.d("updating seekbar text", progress.toString())
 //                    chptProgressView.setText("$chapterPercentage%")
 //                }
-
-
 //                reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
+                // -------------------
+                Log.d("SeekBar", "---------------- SEEKBAR TOUCH---------------")
+                // progress === currWord / total words
+                // chapter from getChapterWord in bookReader fragment
+                // calculate word in chapter: (word - offset)
+                // calculate sentence start, and then use those to iterate from that point
+
+
+
+                Log.d("SeekBar", "----------------STOP TOUCH SEEKBAR ---------------")
             }
         })
     }
