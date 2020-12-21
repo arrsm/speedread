@@ -25,7 +25,7 @@ class Seeker(rootView: View,
 
         chapterSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-                Log.d("seeking: ", "$progress / $max");
+//                Log.d("seeking: ", "$progress / $max");
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar) {
@@ -56,6 +56,7 @@ class Seeker(rootView: View,
     }
 
     fun setSeekBarData(wordOffset: Int, currentWordIdx: Int) {
+//        Log.d("setting seek bar data", "offset ${wordOffset} curr ${currentWordIdx} max ${chapterSeekBar.max}")
         val chptPercentageComplete = getChapterPercentageComplete(currentWordIdx, wordOffset)
         if (chptPercentageComplete.toString().length > 3) {
             chptProgressView.setText(chptPercentageComplete.toString().substring(0, 4) + "%")
