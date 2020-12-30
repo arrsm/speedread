@@ -218,8 +218,9 @@ class BookReaderFragment(val book: Book) : Fragment() {
 
     fun getChapterOffsets(): ArrayList<Int>? {
         // check if available from prefs if not calculate offsets for each section
-        val chapterBookSizes = PrefsUtil.readBookChapterSizes(activity!!, chosenFileName!!)
-        if (chapterBookSizes == null) return null
+        var chapterBookSizes = PrefsUtil.readBookChapterSizes(activity!!, chosenFileName!!)
+        if (chapterBookSizes == null || !chapterBookSizes.containsKey(chosenFileName!!)) saveBookDetailsToPrefs()
+        chapterBookSizes = PrefsUtil.readBookChapterSizes(activity!!, chosenFileName!!)!!
         return cumSum(chapterBookSizes[chosenFileName!!]
                 ?: getChapterTokens(book).map { it.size } as ArrayList<Int>)
     }
