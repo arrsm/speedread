@@ -68,7 +68,7 @@ class BookReaderFragment(val book: Book) : Fragment() {
 //        val offset = offsets[storyConfig[CHAPTER_KEY]!!.toInt()]
 
         // TODO provide seeker with info on current word as well rather than relying on the reader to do it
-        seeker = Seeker(rootView, max = getBookTotalWords().toInt())
+        seeker = Seeker(rootView, this, max = getBookTotalWords().toInt())
         reader = Reader(activity = activity!!, rootView = rootView, currentChapter = chapter, seeker = seeker)
         wpm = WPM(activity!!, rootView, reader)
         // TODO obtain the values for this stuff and provide to reader, rather than creating the reader first
@@ -168,7 +168,22 @@ class BookReaderFragment(val book: Book) : Fragment() {
         reader.wordOffset = if (offsets != null) offsets[chapterId] else 0
         reader.currentChapter = chapterId
         reader.maxWordIdx = tokens.size
-        reader.loadChapter(tokens)
+        reader.loadChapter(tokens, 0)
+    }
+
+    fun loadChapterAtWord(chapterId: Int, word: Int) {
+        reader.disposeListener()
+        val chapter = parseChapter(book, chapterId)
+        val chapterText = StringBuilder(chapter!!)
+        val tokens = getWordTokens(chapterText.toString())?.let { tokensToArrayList(it) }
+                ?: ArrayList()
+        val offsets = getChapterOffsets()
+
+        reader.wordOffset = if (offsets != null) offsets[chapterId] else 0
+        reader.currentChapter = chapterId
+        reader.maxWordIdx = tokens.size
+        chapterControl.setChapterText(chapterId +1, book.spine.spineReferences.size)
+        reader.loadChapter(tokens, word)
     }
 
     fun getBookTotalWords(): String {
@@ -180,7 +195,7 @@ class BookReaderFragment(val book: Book) : Fragment() {
     fun readBook() {
         val bookTokens = getBookWords()
         reader.maxWordIdx = bookTokens.size
-        reader.loadChapter(bookTokens)
+        reader.loadChapter(bookTokens, 0)
     }
 
     fun getBookWords(): ArrayList<String> {
@@ -253,15 +268,25 @@ class BookReaderFragment(val book: Book) : Fragment() {
     }
 
     fun getChapterWord(word: Int, chapterLengths: ArrayList<Int>): Int {
-        // given a word, and chapter lengths determine which chapter the word belongs too
-        val cumSum = cumSum(chapterLengths)
+        // given a word index calclulate the chapter the word belongs to
+        // TODO test cases
+        val chapterOffsets = getChapterOffsets()!!
+//        val cumSum = cumSum(chapterLengths)
 //        Log.d("the chapter lengths are", chapterLengths.toString())
 //        Log.d("the cum sum is", cumSum.toString())
 //        Log.d("Length comparison", "chapters: ${chapterLengths.size} sum:${cumSum.size}")
         var i = 0
-        while (word > cumSum[i]) {
+        while (word > chapterOffsets[i]) {
             i += 1
         }
-        return i + 1
+        return i
     }
+
+    fun getWordInChapter(word: Int, chapter: Int): Int {
+        // TODO test cases
+        if (chapter == 0) return word
+        val chapterOffsets = getChapterOffsets()!!
+        return word - chapterOffsets[chapter - 1]
+    }
+
 }

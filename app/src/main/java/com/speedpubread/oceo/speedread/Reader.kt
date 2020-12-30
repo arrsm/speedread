@@ -56,19 +56,21 @@ class Reader(var WPM: Long = 0,
 
     fun iterateWords() {
         val sentencesEndIdx = getNextSentencesStartIdx(chapter, 1, currentWordIdx)
-        val displayStrs = buildBoldSentences(chapter, currSentenceStart, sentencesEndIdx)
+        val sentenceStartAt = getSentenceStartIdx(currentWordIdx)
+//        val displayStrs = buildBoldSentences(chapter, currSentenceStart, sentencesEndIdx)
+        val displayStrs = buildBoldSentences(chapter, sentenceStartAt, sentencesEndIdx)
         val tempWordIdx = currSentenceStart
 
-        Log.d("OBSERVABLE", "--------------------OBS setup---------------------")
-        Log.d("Chapter: ", chapter.toString())
-        Log.d("maxWordIdx (chapter)", maxWordIdx.toString())
+//        Log.d("OBSERVABLE", "--------------------OBS setup---------------------")
+//        Log.d("Chapter: ", chapter.toString())
+//        Log.d("maxWordIdx (chapter)", maxWordIdx.toString())
 //        Log.d("maxWordIdx (total)", maxWordIdx.toString())
-        Log.d("tempWordIdx", tempWordIdx.toString())
-        Log.d("sentencesEndIdx", sentencesEndIdx.toString())
+//        Log.d("tempWordIdx", tempWordIdx.toString())
+//        Log.d("sentencesEndIdx", sentencesEndIdx.toString())
 //        Log.d("WPM_MS", SpeedReadUtilities.WPMtoMS(WPM).toString())
 //        Log.d("WPM", WPM.toString())
 //        Log.d("sentenceDelay", sentenceDelay.toString())
-        Log.d("OBSERVABLE", "--------------------OBS-setup-END---------------------\n\n")
+//        Log.d("OBSERVABLE", "--------------------OBS-setup-END---------------------\n\n")
 
         var rangeObs: Observable<*> = Observable.range(tempWordIdx, sentencesEndIdx - currentWordIdx)
                 .concatMap { i: Any ->
@@ -164,11 +166,11 @@ class Reader(var WPM: Long = 0,
         iterateWords()
     }
 
-    fun loadChapter(chapter: ArrayList<String>) {
+    fun loadChapter(chapter: ArrayList<String>, wordIndex: Int) {
         disposeListener()
         this.chapter = chapter
         currSentenceStart = 0
-        currentWordIdx = 0
+        currentWordIdx = wordIndex
         currSentenceIdx = 0
         iterateWords()
     }

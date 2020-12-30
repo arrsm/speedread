@@ -48,4 +48,8 @@ class ChapterControl(val context: BookReaderFragment,
         currentChapterview.text = "Section: ${reader.currentChapter + 1}/${maxChapter}"
     }
 
+    fun setChapterText(chapter: Int, maxChapter: Int) {
+        currentChapterview.text = "Section: ${chapter} / ${maxChapter}"
+    }
+
 }

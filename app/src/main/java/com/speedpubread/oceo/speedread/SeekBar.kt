@@ -7,6 +7,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 
 class Seeker(rootView: View,
+             val readerContext: BookReaderFragment,
              val max: Int = 0,
              val min: Int = 0) {
 
@@ -50,12 +51,13 @@ class Seeker(rootView: View,
 //                }
 //                reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
                 // -------------------
-                Log.d("SeekBar", "---------------- SEEKBAR TOUCH---------------")
-                // progress === currWord / total words
-                // chapter from getChapterWord in bookReader fragment
-                // calculate word in chapter: (word - offset)
-                // calculate sentence start, and then use those to iterate from that point
-
+//                Log.d("SeekBar", "---------------- SEEKBAR TOUCH---------------")
+//                Log.d("word / bookwords", "${chapterSeekBar.progress} / ${chapterSeekBar.max} ")
+//                val chpt = readerContext.getChapterWord(chapterSeekBar.progress, ArrayList())
+//                Log.d("Chapter: ", "${chpt}")
+//                val wordInChapter = readerContext.getWordInChapter(chapterSeekBar.progress, chpt)
+//                Log.d("wordInChapter: ", "${wordInChapter}")
+//                readerContext.loadChapterAtWord(chpt- 1, wordInChapter)
 
 
                 Log.d("SeekBar", "----------------STOP TOUCH SEEKBAR ---------------")
