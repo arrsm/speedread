@@ -51,12 +51,12 @@ class Seeker(rootView: View,
 //                }
 //                reader.iterateWords(story!!, currentChunkView!!, currentWordView!!, chptProgressView!!, chapterSeekBar!!)
                 // -------------------
-                Log.d("SeekBar", "---------------- SEEKBAR TOUCH---------------")
-                Log.d("word / bookwords", "${chapterSeekBar.progress} / ${chapterSeekBar.max} ")
+//                Log.d("SeekBar", "---------------- SEEKBAR TOUCH---------------")
+//                Log.d("word / bookwords", "${chapterSeekBar.progress} / ${chapterSeekBar.max} ")
                 val chpt = readerContext.getChapterWord(chapterSeekBar.progress, ArrayList())
-                Log.d("Chapter: ", "${chpt}")
+//                Log.d("Chapter: ", "${chpt}")
                 val wordInChapter = readerContext.getWordInChapter(chapterSeekBar.progress, chpt)
-                Log.d("wordInChapter: ", "${wordInChapter}")
+//                Log.d("wordInChapter: ", "${wordInChapter}")
 
                 if (chpt == 0) {
                     readerContext.loadChapterAtWord(chpt, wordInChapter)
@@ -66,7 +66,7 @@ class Seeker(rootView: View,
                 }
 
 
-                Log.d("SeekBar", "----------------STOP TOUCH SEEKBAR ---------------")
+//                Log.d("SeekBar", "----------------STOP TOUCH SEEKBAR ---------------")
             }
         })
     }
