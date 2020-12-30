@@ -180,6 +180,7 @@ class BookReaderFragment(val book: Book) : Fragment() {
                 ?: ArrayList()
         val offsets = getChapterOffsets()
 
+
         reader.wordOffset = if (offsets != null) offsets[chapterId] else 0
         reader.currentChapter = chapterId
         reader.maxWordIdx = tokens.size
