@@ -172,6 +172,7 @@ class BookReaderFragment(val book: Book) : Fragment() {
     }
 
     fun loadChapterAtWord(chapterId: Int, word: Int) {
+
         reader.disposeListener()
         val chapter = parseChapter(book, chapterId)
         val chapterText = StringBuilder(chapter!!)
@@ -182,7 +183,7 @@ class BookReaderFragment(val book: Book) : Fragment() {
         reader.wordOffset = if (offsets != null) offsets[chapterId] else 0
         reader.currentChapter = chapterId
         reader.maxWordIdx = tokens.size
-        chapterControl.setChapterText(chapterId +1, book.spine.spineReferences.size)
+        chapterControl.setChapterText(chapterId + 1, book.spine.spineReferences.size)
         reader.loadChapter(tokens, word)
     }
 

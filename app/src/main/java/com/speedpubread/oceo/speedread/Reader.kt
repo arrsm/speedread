@@ -55,6 +55,7 @@ class Reader(var WPM: Long = 0,
     }
 
     fun iterateWords() {
+        seeker.setSeekBarData(wordOffset, currentWordIdx)
         val sentencesEndIdx = getNextSentencesStartIdx(chapter, 1, currentWordIdx)
         val sentenceStartAt = getSentenceStartIdx(currentWordIdx)
 //        val displayStrs = buildBoldSentences(chapter, currSentenceStart, sentencesEndIdx)
@@ -89,7 +90,7 @@ class Reader(var WPM: Long = 0,
                 currentWordView.text = chapter!![currentWordIdx]
                 currSentenceIdx++
                 currentWordIdx++
-                seeker.setSeekBarData(wordOffset, currentWordIdx)
+//                seeker.setSeekBarData(wordOffset, currentWordIdx)
             } else {
 //                Log.d("OUT OF BOUNDS: currentWordIdx / displayStrs.size", currentWordIdx.toString() + " / " + displayStrs.size.toString())
             }
@@ -147,7 +148,8 @@ class Reader(var WPM: Long = 0,
 
     fun getSentenceStartIdx(idx: Int): Int {
         var temp = idx
-        if (chapter == null || temp >= chapter!!.size) return 0
+        if (chapter == null) return 0
+        if (temp >= chapter!!.size) temp = chapter!!.size - 1
         while (temp > 0 && !chapter!![temp].contains(".")) {
             temp -= 1
         }
@@ -169,7 +171,7 @@ class Reader(var WPM: Long = 0,
     fun loadChapter(chapter: ArrayList<String>, wordIndex: Int) {
         disposeListener()
         this.chapter = chapter
-        currSentenceStart = 0
+//        currSentenceStart = 0
         currentWordIdx = wordIndex
         currSentenceIdx = 0
         iterateWords()

@@ -3,6 +3,7 @@ package com.speedpubread.oceo.speedread.parser
 import android.graphics.Bitmap
 import android.text.Html
 import android.text.Spanned
+import android.util.Log
 import com.speedpubread.oceo.speedread.EPubLibUtil
 import nl.siegmann.epublib.domain.Book
 import nl.siegmann.epublib.domain.Resource
@@ -36,6 +37,7 @@ fun parseChapter(book: Book, spineLocation: Int): String? {
             }
         }
     } catch (e: IOException) {
+        Log.d("BookParse", "Error here")
         e.printStackTrace()
     }
     // TODO check if this is faster than the if statement to add a space after each insert
